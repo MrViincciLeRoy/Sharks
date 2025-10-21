@@ -1,5 +1,5 @@
 services:
-  # Background Worker - Database Initialization
+  # Background Worker - Database Initialization (FREE TIER)
   - type: worker
     name: odoo-db-init
     env: docker
@@ -19,32 +19,29 @@ services:
       - key: PGSSLMODE
         value: require
     # This worker runs once on deploy to initialize the DB
-    # Set to manual start so it doesn't keep running
     autoDeploy: true
 
-  # Web Service - Odoo Application
-  - type: web
-    name: odoo-web
-    env: docker
-    dockerfilePath: ./Dockerfile
-    dockerCommand: /entrypoint.sh
-    envVars:
-      - key: PGHOST
-        sync: false
-      - key: PGPORT
-        sync: false
-      - key: PGUSER
-        sync: false
-      - key: PGPASSWORD
-        sync: false
-      - key: PGDATABASE
-        sync: false
-      - key: PGSSLMODE
-        value: require
-    healthCheckPath: /web/health
-    # Wait for the init worker to complete before starting
-    # Note: You may need to manually ensure the worker completes first
-    autoDeploy: true
+  # COMMENTED OUT - Uncomment when ready to add web service (requires payment)
+  # - type: web
+  #   name: odoo-web
+  #   env: docker
+  #   dockerfilePath: ./Dockerfile
+  #   dockerCommand: /entrypoint.sh
+  #   envVars:
+  #     - key: PGHOST
+  #       sync: false
+  #     - key: PGPORT
+  #       sync: false
+  #     - key: PGUSER
+  #       sync: false
+  #     - key: PGPASSWORD
+  #       sync: false
+  #     - key: PGDATABASE
+  #       sync: false
+  #     - key: PGSSLMODE
+  #       value: require
+  #   healthCheckPath: /web/health
+  #   autoDeploy: true
 
 databases:
   # This references your existing Aiven PostgreSQL database
