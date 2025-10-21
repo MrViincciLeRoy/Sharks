@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: odoo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /web/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8069
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: odoo-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: odoo-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: odoo-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: odoo-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: odoo-db
+          property: password
+
+databases:
+  - name: odoo-db
+    plan: free
+    databaseName: odoo
+    user: odoo
