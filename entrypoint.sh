@@ -1,28 +1,33 @@
 #!/bin/bash
 set -e
 
-# Use PostgreSQL environment variables if set
-if [ -n "$PGHOST" ]; then
-    export HOST="$PGHOST"
+# Use PostgreSQL environment variables from Render
+if [ -n "$POSTGRES_HOST" ]; then
+    export PGHOST="$POSTGRES_HOST"
 fi
 
-if [ -n "$PGPORT" ]; then
-    export PORT="$PGPORT"
+if [ -n "$POSTGRES_PORT" ]; then
+    export PGPORT="$POSTGRES_PORT"
 fi
 
-if [ -n "$PGUSER" ]; then
-    export USER="$PGUSER"
+if [ -n "$POSTGRES_USER" ]; then
+    export PGUSER="$POSTGRES_USER"
 fi
 
-if [ -n "$PGPASSWORD" ]; then
-    export PASSWORD="$PGPASSWORD"
+if [ -n "$POSTGRES_PASSWORD" ]; then
+    export PGPASSWORD="$POSTGRES_PASSWORD"
 fi
 
-# Start Odoo with explicit database parameters
+if [ -n "$POSTGRES_DB" ]; then
+    export PGDATABASE="$POSTGRES_DB"
+fi
+
+# Start Odoo with explicit database parameters and SSL mode
 exec odoo \
     --db_host="${PGHOST}" \
     --db_port="${PGPORT:-5432}" \
     --db_user="${PGUSER}" \
     --db_password="${PGPASSWORD}" \
+    --db_sslmode=require \
     --http-port=8069 \
     "$@"

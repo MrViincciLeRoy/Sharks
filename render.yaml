@@ -10,26 +10,30 @@ services:
         value: 0.0.0.0
       - key: PORT
         value: 8069
-      - key: POSTGRES_HOST
+      # Use PG* prefix to match what psycopg2 expects
+      - key: PGHOST
         fromDatabase:
           name: odoo-db
           property: host
-      - key: POSTGRES_PORT
+      - key: PGPORT
         fromDatabase:
           name: odoo-db
           property: port
-      - key: POSTGRES_DB
+      - key: PGDATABASE
         fromDatabase:
           name: odoo-db
           property: database
-      - key: POSTGRES_USER
+      - key: PGUSER
         fromDatabase:
           name: odoo-db
           property: user
-      - key: POSTGRES_PASSWORD
+      - key: PGPASSWORD
         fromDatabase:
           name: odoo-db
           property: password
+      # Force SSL mode for Render's PostgreSQL
+      - key: PGSSLMODE
+        value: require
 
 databases:
   - name: odoo-db
