@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Debug: Print environment variables (remove this after debugging)
+# Debug: Print environment variables
 echo "=== Environment Variables Debug ==="
 echo "PGHOST: ${PGHOST:-NOT SET}"
 echo "PGPORT: ${PGPORT:-NOT SET}"
@@ -10,10 +10,9 @@ echo "PGDATABASE: ${PGDATABASE:-NOT SET}"
 echo "DATABASE_URL: ${DATABASE_URL:-NOT SET}"
 echo "==================================="
 
-# Parse DATABASE_URL if it exists (Render often provides this)
+# Parse DATABASE_URL if it exists
 if [ -n "$DATABASE_URL" ]; then
     echo "Parsing DATABASE_URL..."
-    # Extract components from postgresql://user:pass@host:port/dbname
     DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
     DB_PASS=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
@@ -27,7 +26,7 @@ if [ -n "$DATABASE_URL" ]; then
     export PGDATABASE="${DB_NAME}"
 fi
 
-# Fallback to individual PG variables if not set
+# Fallback to individual PG variables
 if [ -z "$PGHOST" ] && [ -n "$POSTGRES_HOST" ]; then
     export PGHOST="$POSTGRES_HOST"
 fi
@@ -48,7 +47,6 @@ if [ -z "$PGDATABASE" ] && [ -n "$POSTGRES_DB" ]; then
     export PGDATABASE="$POSTGRES_DB"
 fi
 
-# Final debug output
 echo "=== Using Database Configuration ==="
 echo "Host: ${PGHOST}"
 echo "Port: ${PGPORT}"
@@ -56,14 +54,17 @@ echo "User: ${PGUSER}"
 echo "Database: ${PGDATABASE}"
 echo "===================================="
 
-# Start Odoo with explicit database parameters
+# CRITICAL: Set SSL mode environment variable for psycopg2
+# Use prefer instead of require to allow fallback
+export PGSSLMODE=prefer
+
+# Start Odoo
+# Note: Odoo's --db_sslmode doesn't always work correctly
+# Using PGSSLMODE env var which psycopg2 respects directly
 exec odoo \
     --db_host="${PGHOST}" \
     --db_port="${PGPORT:-5432}" \
     --db_user="${PGUSER}" \
     --db_password="${PGPASSWORD}" \
-    --db_sslmode=require \
-    --database="${PGDATABASE}" \
     --http-port=8069 \
-    --no-database-list \
     "$@"
