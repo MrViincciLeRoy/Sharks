@@ -22,7 +22,7 @@ if ! PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}
         --db_password="${PGPASSWORD}" \
         --database="${PGDATABASE}" \
         --db_sslmode="${PGSSLMODE:-disable}" \
-        -i base \
+        -i base,account,sale_management,crm,stock,purchase,account_accountant,payment,l10n_generic_coa \
         --stop-after-init \
         --without-demo=all
     echo "=== [INIT JOB] Database initialization successful! ==="
