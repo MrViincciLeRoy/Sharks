@@ -1,22 +1,28 @@
+# render.yaml
+# Defines the deployment strategy on Render.
+
 services:
-  - type: web
-    name: odoo
+  # 1. THE INITIALIZATION JOB
+  # This service runs first on every deployment. It's a short-lived "background job".
+  - type: job
+    name: odoo-init
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: free
-    healthCheckPath: /web/health
+    # We tell this job to specifically run the init-db.sh script.
+    dockerCommand: /init-db.sh
     envVars:
-      - key: HOST
-        value: 0.0.0.0
-      - key: PORT
-        value: 8069
-      # Use internal connection - no SSL needed within Render's network
       - key: PGHOST
-        value: odoo-db
+        fromDatabase:
+          name: odoo-db
+          property: host
       - key: PGPORT
-        value: 5432
+        fromDatabase:
+          name: odoo-db
+          property: port
       - key: PGDATABASE
-        value: odoo_6rk7
+        fromDatabase:
+          name: odoo-db
+          property: database
       - key: PGUSER
         fromDatabase:
           name: odoo-db
@@ -25,12 +31,48 @@ services:
         fromDatabase:
           name: odoo-db
           property: password
-      # Disable SSL for internal connections
+      - key: PGSSLMODE
+        value: disable
+
+  # 2. THE MAIN WEB SERVICE
+  # This service only starts after the 'odoo-init' job above completes successfully.
+  - type: web
+    name: odoo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # This uses the default ENTRYPOINT from the Dockerfile (/entrypoint.sh).
+    healthCheckPath: /web/health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8069
+      - key: PGHOST
+        fromDatabase:
+          name: odoo-db
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: odoo-db
+          property: port
+      - key: PGDATABASE
+        fromDatabase:
+          name: odoo-db
+          property: database
+      - key: PGUSER
+        fromDatabase:
+          name: odoo-db
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: odoo-db
+          property: password
       - key: PGSSLMODE
         value: disable
 
 databases:
+  # 3. THE DATABASE INSTANCE
   - name: odoo-db
-    plan: free
-    databaseName: odoo_6rk7
+    databaseName: odoo_db
     user: odoo
+
