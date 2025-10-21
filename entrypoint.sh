@@ -13,9 +13,6 @@ echo "==================================="
 # Parse DATABASE_URL if it exists
 if [ -n "$DATABASE_URL" ]; then
     echo "Parsing DATABASE_URL..."
-    # The default URL parser might not handle the ssl parameter well.
-    # It's more robust to add it to the final Odoo command.
-    # Example: postgres://USER:PASSWORD@HOST:PORT/DB?ssl=true
     DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
     DB_PASS=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
@@ -57,17 +54,36 @@ echo "User: ${PGUSER}"
 echo "Database: ${PGDATABASE}"
 echo "===================================="
 
-# CRITICAL: Set SSL mode to 'require' for Render PostgreSQL
-# The PGSSLMODE variable is the standard way to configure libpq for SSL.
-# This variable is respected by Odoo's underlying psycopg2 library.
+# Set SSL mode to 'require' for Aiven/external PostgreSQL
 export PGSSLMODE=require
 
-# Start Odoo with explicit SSL mode parameter to be absolutely certain
+# Check if database needs initialization
+echo "=== Checking Database State ==="
+if ! PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -c "SELECT 1 FROM information_schema.tables WHERE table_name='ir_module_module'" 2>/dev/null | grep -q 1; then
+    echo "=== Database Not Initialized - Installing Base Module ==="
+    odoo \
+        --db_host="${PGHOST}" \
+        --db_port="${PGPORT:-5432}" \
+        --db_user="${PGUSER}" \
+        --db_password="${PGPASSWORD}" \
+        --database="${PGDATABASE}" \
+        --db_sslmode=require \
+        -i base \
+        --stop-after-init \
+        --without-demo=all
+    echo "=== Database Initialization Complete ==="
+else
+    echo "=== Database Already Initialized ==="
+fi
+
+# Start Odoo normally
+echo "=== Starting Odoo ==="
 exec odoo \
     --db_host="${PGHOST}" \
     --db_port="${PGPORT:-5432}" \
     --db_user="${PGUSER}" \
     --db_password="${PGPASSWORD}" \
+    --database="${PGDATABASE}" \
     --db_sslmode=require \
     --http-port=8069 \
     "$@"
