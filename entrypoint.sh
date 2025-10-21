@@ -1,3 +1,5 @@
+########################################################################
+#!/bin/bash
 set -e
 
 # Debug: Print environment variables
@@ -83,10 +85,9 @@ echo "=== Checking Database State ==="
 DB_INITIALIZED=$(PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='ir_module_module';" 2>/dev/null || echo "0")
 
 if [ "$DB_INITIALIZED" = "0" ]; then
-    echo "=== Database Not Initialized ==="
-    echo "=== Starting Odoo with initialization in background ==="
+    echo "=== Database Not Initialized - Installing Base Module ==="
+    echo "This may take several minutes..."
     
-    # Start Odoo server first to keep port open
     odoo \
         --db_host="${PGHOST}" \
         --db_port="${PGPORT}" \
@@ -94,26 +95,31 @@ if [ "$DB_INITIALIZED" = "0" ]; then
         --db_password="${PGPASSWORD}" \
         --database="${PGDATABASE}" \
         --db_sslmode=require \
-        --db-filter="^${PGDATABASE}$" \
-        --http-port=8069 \
-        --log-level=info \
-        --init=base \
+        -i base \
+        --stop-after-init \
         --without-demo=all \
-        "$@"
+        --log-level=info
+    
+    if [ $? -eq 0 ]; then
+        echo "=== Database Initialization Complete ==="
+    else
+        echo "ERROR: Database initialization failed"
+        exit 1
+    fi
 else
     echo "=== Database Already Initialized ==="
-    echo "=== Starting Odoo Server ==="
-    
-    # Start Odoo normally
-    exec odoo \
-        --db_host="${PGHOST}" \
-        --db_port="${PGPORT}" \
-        --db_user="${PGUSER}" \
-        --db_password="${PGPASSWORD}" \
-        --database="${PGDATABASE}" \
-        --db_sslmode=require \
-        --db-filter="^${PGDATABASE}$" \
-        --http-port=8069 \
-        --log-level=info \
-        "$@"
 fi
+
+# Start Odoo normally
+echo "=== Starting Odoo Server ==="
+exec odoo \
+    --db_host="${PGHOST}" \
+    --db_port="${PGPORT}" \
+    --db_user="${PGUSER}" \
+    --db_password="${PGPASSWORD}" \
+    --database="${PGDATABASE}" \
+    --db_sslmode=require \
+    --db-filter="^${PGDATABASE}$" \
+    --http-port=8069 \
+    --log-level=info \
+    "$@"
