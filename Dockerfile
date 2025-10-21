@@ -2,6 +2,14 @@ FROM odoo:17.0
 
 USER root
 
+# Install CA certificates for SSL connections
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

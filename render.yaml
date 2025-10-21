@@ -10,19 +10,13 @@ services:
         value: 0.0.0.0
       - key: PORT
         value: 8069
-      # Use PG* prefix to match what psycopg2 expects
+      # Use internal connection - no SSL needed within Render's network
       - key: PGHOST
-        fromDatabase:
-          name: odoo-db
-          property: host
+        value: odoo-db
       - key: PGPORT
-        fromDatabase:
-          name: odoo-db
-          property: port
+        value: 5432
       - key: PGDATABASE
-        fromDatabase:
-          name: odoo-db
-          property: database
+        value: odoo_6rk7
       - key: PGUSER
         fromDatabase:
           name: odoo-db
@@ -31,12 +25,12 @@ services:
         fromDatabase:
           name: odoo-db
           property: password
-      # Force SSL mode for Render's PostgreSQL
+      # Disable SSL for internal connections
       - key: PGSSLMODE
-        value: require
+        value: disable
 
 databases:
   - name: odoo-db
     plan: free
-    databaseName: odoo
+    databaseName: odoo_6rk7
     user: odoo
