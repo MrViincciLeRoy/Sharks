@@ -1,0 +1,48 @@
+name: Initialize Odoo Database
+
+on:
+  # Manual trigger only - you control when to run this
+  workflow_dispatch:
+  
+  # OR uncomment below to run automatically on push to main
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  init-database:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build initialization Docker image
+        run: |
+          docker build -f Dockerfile.init -t odoo-init .
+
+      - name: Run database initialization
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-init
+
+      - name: Initialization Complete
+        run: |
+          echo "✅ Database initialization completed successfully!"
+          echo "Your Odoo database is now ready to use."
