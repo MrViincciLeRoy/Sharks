@@ -54,17 +54,16 @@ echo "User: ${PGUSER}"
 echo "Database: ${PGDATABASE}"
 echo "===================================="
 
-# CRITICAL: Set SSL mode environment variable for psycopg2
-# Use prefer instead of require to allow fallback
-export PGSSLMODE=prefer
+# CRITICAL: Set SSL mode to 'require' for Render PostgreSQL
+# Render databases require SSL connections
+export PGSSLMODE=require
 
-# Start Odoo
-# Note: Odoo's --db_sslmode doesn't always work correctly
-# Using PGSSLMODE env var which psycopg2 respects directly
+# Start Odoo with explicit SSL mode parameter
 exec odoo \
     --db_host="${PGHOST}" \
     --db_port="${PGPORT:-5432}" \
     --db_user="${PGUSER}" \
     --db_password="${PGPASSWORD}" \
+    --db_sslmode=require \
     --http-port=8069 \
     "$@"
