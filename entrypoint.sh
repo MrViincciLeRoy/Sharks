@@ -13,6 +13,9 @@ echo "==================================="
 # Parse DATABASE_URL if it exists
 if [ -n "$DATABASE_URL" ]; then
     echo "Parsing DATABASE_URL..."
+    # The default URL parser might not handle the ssl parameter well.
+    # It's more robust to add it to the final Odoo command.
+    # Example: postgres://USER:PASSWORD@HOST:PORT/DB?ssl=true
     DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
     DB_PASS=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
@@ -55,10 +58,11 @@ echo "Database: ${PGDATABASE}"
 echo "===================================="
 
 # CRITICAL: Set SSL mode to 'require' for Render PostgreSQL
-# Render databases require SSL connections
+# The PGSSLMODE variable is the standard way to configure libpq for SSL.
+# This variable is respected by Odoo's underlying psycopg2 library.
 export PGSSLMODE=require
 
-# Start Odoo with explicit SSL mode parameter
+# Start Odoo with explicit SSL mode parameter to be absolutely certain
 exec odoo \
     --db_host="${PGHOST}" \
     --db_port="${PGPORT:-5432}" \
