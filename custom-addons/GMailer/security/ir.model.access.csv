@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_google_credentials_user,google.credentials.user,model_google_credentials,base.group_user,1,1,1,1
+access_email_statement_user,email.statement.user,model_email_statement,base.group_user,1,1,1,0
+access_bank_transaction_user,bank.transaction.user,model_bank_transaction,base.group_user,1,1,1,0
+access_bank_transaction_manager,bank.transaction.manager,model_bank_transaction,account.group_account_manager,1,1,1,1
