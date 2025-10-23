@@ -16,8 +16,8 @@
     'data': [
         'security/ir.model.access.csv',
         'views/google_credentials_views.xml',
+        'views/bank_transaction_views.xml',  # MOVED BEFORE email_statement_views.xml
         'views/email_statement_views.xml',
-        'views/bank_transaction_views.xml',
         'data/cron_jobs.xml',
     ],
     'external_dependencies': {
