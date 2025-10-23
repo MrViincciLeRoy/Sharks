@@ -8,17 +8,39 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies for GMailer addon
+RUN pip3 install --no-cache-dir \
+    google-auth \
+    google-auth-oauthlib \
+    google-auth-httplib2 \
+    google-api-python-client \
+    beautifulsoup4 \
+    requests
+
+# Create directories first with proper permissions
+RUN mkdir -p /mnt/extra-addons && \
+    mkdir -p /var/lib/odoo && \
+    chown -R odoo:odoo /mnt/extra-addons && \
+    chown -R odoo:odoo /var/lib/odoo
+
+# Copy custom addons directory - THIS IS THE KEY FIX
+COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
+
 # Copy only the init script
 COPY init-db.sh /init-db.sh
 
 # Make script executable
 RUN chmod +x /init-db.sh
 
-# Create directories and set ownership for the odoo user
-RUN mkdir -p /mnt/extra-addons && \
-    chown -R odoo:odoo /mnt/extra-addons && \
-    mkdir -p /var/lib/odoo && \
-    chown -R odoo:odoo /var/lib/odoo
+# Verify the addon is copied and show its structure for debugging
+RUN echo "=== VERIFICATION: Checking if /mnt/extra-addons exists ===" && \
+    ls -la /mnt/extra-addons/ && \
+    echo "=== VERIFICATION: Checking GMailer directory ===" && \
+    ls -la /mnt/extra-addons/GMailer/ && \
+    echo "=== VERIFICATION: Checking __manifest__.py ===" && \
+    test -f /mnt/extra-addons/GMailer/__manifest__.py && echo "✅ __manifest__.py found" || echo "❌ __manifest__.py NOT FOUND" && \
+    echo "=== VERIFICATION: Checking __init__.py ===" && \
+    test -f /mnt/extra-addons/GMailer/__init__.py && echo "✅ __init__.py found" || echo "❌ __init__.py NOT FOUND"
 
 USER odoo
 
