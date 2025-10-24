@@ -19,6 +19,11 @@ class GoogleAuthController(http.Controller):
         
         # Exchange code for tokens
         base_url = request.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        
+        # FORCE HTTPS - Google requires it for Gmail scope
+        if base_url.startswith('http://'):
+            base_url = base_url.replace('http://', 'https://', 1)
+        
         redirect_uri = f"{base_url}/google_auth/callback"
         
         token_url = 'https://oauth2.googleapis.com/token'
@@ -44,6 +49,8 @@ class GoogleAuthController(http.Controller):
                 'token_expiry': expiry,
             })
             
-            return request.redirect('/web#action=statement_email_importer.action_email_statement')
+            # Redirect back to the main web interface
+            # User can navigate to Email Statements from the menu
+            return request.redirect('/web')
         
         return request.redirect('/web')
