@@ -1,0 +1,118 @@
+name: Reset and Initialize Odoo Database
+
+on:
+  # Manual trigger only - you control when to run this
+  workflow_dispatch:
+    inputs:
+      confirm_reset:
+        description: 'Type "RESET" to confirm database deletion'
+        required: true
+        default: ''
+  
+  # OR uncomment below to run automatically on push to main
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  reset-and-init-database:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Validate confirmation
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm_reset }}" != "RESET" ]; then
+            echo "❌ Confirmation failed. You must type 'RESET' to proceed."
+            exit 1
+          fi
+          echo "✅ Confirmation received. Proceeding with database reset..."
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Drop existing database
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🗑️  Attempting to drop database: ${PGDATABASE}"
+          
+          # Terminate all connections to the database first
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d postgres -c \
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${PGDATABASE}' AND pid <> pg_backend_pid();" \
+            || echo "No active connections to terminate"
+          
+          # Drop the database
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d postgres -c \
+            "DROP DATABASE IF EXISTS \"${PGDATABASE}\";" \
+            && echo "✅ Database dropped successfully" \
+            || echo "⚠️  Database may not exist or could not be dropped"
+
+      - name: Create fresh database
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🔨 Creating new database: ${PGDATABASE}"
+          
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d postgres -c \
+            "CREATE DATABASE \"${PGDATABASE}\" WITH ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8' TEMPLATE=template0;" \
+            && echo "✅ Database created successfully" \
+            || { echo "❌ Failed to create database"; exit 1; }
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build initialization Docker image
+        run: |
+          echo "🏗️  Building Docker image for initialization..."
+          docker build -f Dockerfile.init -t odoo-init .
+
+      - name: Run database initialization
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🚀 Initializing Odoo with GMailer addon..."
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-init
+
+      - name: Initialization Complete
+        run: |
+          echo "✅ Database reset and initialization completed successfully!"
+          echo ""
+          echo "📋 Summary:"
+          echo "  • Old database dropped"
+          echo "  • Fresh database created"
+          echo "  • Odoo base modules installed"
+          echo "  • GMailer addon installed"
+          echo ""
+          echo "🔐 Default credentials:"
+          echo "  Username: admin"
+          echo "  Password: admin"
+          echo ""
+          echo "Your Odoo database is now ready to use!"
