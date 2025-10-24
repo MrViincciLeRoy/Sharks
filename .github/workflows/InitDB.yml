@@ -47,8 +47,8 @@ jobs:
           echo "Database: ${PGDATABASE}"
           echo ""
           
-          # Drop all tables in the public schema
-          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" << 'EOF'
+          # Create a SQL file to drop everything
+          cat > drop_all.sql << 'EOFMARKER'
           DO $$ 
           DECLARE
               r RECORD;
@@ -68,7 +68,10 @@ jobs:
                   EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.viewname) || ' CASCADE';
               END LOOP;
           END $$;
-          EOF
+          EOFMARKER
+          
+          # Execute the SQL file
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -f drop_all.sql
           
           echo "✅ Database wiped clean!"
           echo ""
