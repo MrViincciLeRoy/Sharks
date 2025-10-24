@@ -1,7 +1,6 @@
 name: Initialize Odoo Database
 
 on:
-  # Manual trigger only - you control when to run this
   workflow_dispatch:
     inputs:
       action:
@@ -25,8 +24,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build initialization Docker image
-        run: |
-          docker build -f Dockerfile.init -t odoo-init .
+        run: docker build -f Dockerfile.init -t odoo-init .
 
       - name: Install PostgreSQL client
         run: |
@@ -43,37 +41,13 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "⚠️ WARNING: Dropping all tables from database..."
+          echo "WARNING: Dropping all tables from database..."
           echo "Database: ${PGDATABASE}"
           echo ""
           
-          # Create a SQL file to drop everything
-          cat > drop_all.sql << 'EOFMARKER'
-          DO $$ 
-          DECLARE
-              r RECORD;
-          BEGIN
-              -- Drop all tables
-              FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                  EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
-              END LOOP;
-              
-              -- Drop all sequences
-              FOR r IN (SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = 'public') LOOP
-                  EXECUTE 'DROP SEQUENCE IF EXISTS public.' || quote_ident(r.sequence_name) || ' CASCADE';
-              END LOOP;
-              
-              -- Drop all views
-              FOR r IN (SELECT viewname FROM pg_views WHERE schemaname = 'public') LOOP
-                  EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.viewname) || ' CASCADE';
-              END LOOP;
-          END $$;
-          EOFMARKER
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${PGUSER}; GRANT ALL ON SCHEMA public TO public;"
           
-          # Execute the SQL file
-          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -f drop_all.sql
-          
-          echo "✅ Database wiped clean!"
+          echo "Database wiped clean!"
           echo ""
 
       - name: Run database initialization
@@ -101,15 +75,15 @@ jobs:
       - name: Initialization Complete
         run: |
           echo ""
-          echo "✅ Database operation completed successfully!"
+          echo "Database operation completed successfully!"
           echo ""
           if [ "${{ github.event.inputs.action }}" == "Complete Database Reset (DANGER: deletes all data)" ]; then
-            echo "🔄 Database has been completely reset and reinitialized"
-            echo "📦 Installed modules: base, account, sale_management, GMailer"
-            echo "🔑 Login credentials: admin / admin"
+            echo "Database has been completely reset and reinitialized"
+            echo "Installed modules: base, account, sale_management, GMailer"
+            echo "Login credentials: admin / admin"
           else
-            echo "📦 GMailer module has been installed/updated"
-            echo "🔑 Use your existing login credentials"
+            echo "GMailer module has been installed/updated"
+            echo "Use your existing login credentials"
           fi
           echo ""
           echo "Your Odoo database is now ready to use."
