@@ -1,13 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Action to trigger manual import -->
+    <record id="action_fetch_gmail_statements" model="ir.actions.server">
+        <field name="name">? Import from Gmail</field>
+        <field name="model_id" ref="model_email_statement"/>
+        <field name="state">code</field>
+        <field name="code">
+result = model.fetch_statements_from_gmail()
+        </field>
+    </record>
+
+    <!-- Tree view with import button -->
+    <record id="view_email_statement_tree" model="ir.ui.view">
+        <field name="name">email.statement.tree</field>
+        <field name="model">email.statement</field>
+        <field name="arch" type="xml">
+            <tree string="Email Statements">
+                <header>
+                    <button name="%(action_fetch_gmail_statements)d" 
+                            type="action" 
+                            string="? Import from Gmail" 
+                            class="btn-primary"/>
+                </header>
+                <field name="date"/>
+                <field name="name"/>
+                <field name="sender"/>
+                <field name="bank_name"/>
+                <field name="transaction_count"/>
+                <field name="has_pdf" invisible="1"/>
+                <field name="state" widget="badge" 
+                       decoration-info="state=='draft'" 
+                       decoration-success="state=='parsed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form view with PDF download -->
     <record id="view_email_statement_form" model="ir.ui.view">
         <field name="name">email.statement.form</field>
         <field name="model">email.statement</field>
         <field name="arch" type="xml">
             <form string="Email Statement">
                 <header>
-                    <button name="action_parse_statement" string="Parse Transactions" 
-                            type="object" class="oe_highlight" 
+                    <button name="action_download_and_parse_pdf" 
+                            string="? Download &amp; Parse PDF" 
+                            type="object" 
+                            class="oe_highlight" 
                             invisible="state != 'draft'"/>
                     <field name="state" widget="statusbar"/>
                 </header>
@@ -19,25 +57,29 @@
                             <field name="transaction_count" widget="statinfo" 
                                    string="Transactions"/>
                         </button>
+                        <button class="oe_stat_button" icon="fa-file-pdf-o" 
+                                name="action_view_attachments" type="object">
+                            <field name="attachment_count" widget="statinfo" 
+                                   string="PDFs"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
                     </div>
                     <group>
                         <group>
-                            <field name="name"/>
                             <field name="sender"/>
+                            <field name="bank_name"/>
                             <field name="date"/>
                         </group>
                         <group>
                             <field name="gmail_id"/>
-                            <field name="attachment_count"/>
+                            <field name="has_pdf" widget="boolean_toggle"/>
                         </group>
                     </group>
                     <notebook>
-                        <page string="HTML Content" invisible="not body_html">
-                            <field name="body_html" widget="html"/>
-                        </page>
-                        <page string="Text Content">
-                            <field name="body_text"/>
-                        </page>
                         <page string="Transactions">
                             <field name="transaction_ids">
                                 <tree>
@@ -49,28 +91,19 @@
                                 </tree>
                             </field>
                         </page>
+                        <page string="HTML Content" invisible="not body_html">
+                            <field name="body_html" widget="html"/>
+                        </page>
+                        <page string="Text Content">
+                            <field name="body_text"/>
+                        </page>
                     </notebook>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <record id="view_email_statement_tree" model="ir.ui.view">
-        <field name="name">email.statement.tree</field>
-        <field name="model">email.statement</field>
-        <field name="arch" type="xml">
-            <tree string="Email Statements">
-                <field name="date"/>
-                <field name="name"/>
-                <field name="sender"/>
-                <field name="transaction_count"/>
-                <field name="state" widget="badge" 
-                       decoration-info="state=='draft'" 
-                       decoration-success="state=='parsed'"/>
-            </tree>
-        </field>
-    </record>
-
+    <!-- Add method to view attachments -->
     <record id="action_email_statement" model="ir.actions.act_window">
         <field name="name">Email Statements</field>
         <field name="res_model">email.statement</field>
@@ -80,4 +113,3 @@
     <menuitem id="menu_email_statement" name="Email Statements" 
               parent="menu_statement_importer_root" action="action_email_statement" sequence="20"/>
 </odoo>
-
