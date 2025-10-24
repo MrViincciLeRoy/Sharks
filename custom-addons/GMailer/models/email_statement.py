@@ -59,6 +59,18 @@ class EmailStatement(models.Model):
                 ('res_id', '=', record.id)
             ])
     
+    def action_view_attachments(self):
+        """Open attachments view"""
+        self.ensure_one()
+        return {
+            'name': 'Attachments',
+            'type': 'ir.actions.act_window',
+            'res_model': 'ir.attachment',
+            'view_mode': 'tree,form',
+            'domain': [('res_model', '=', self._name), ('res_id', '=', self.id)],
+            'context': {'default_res_model': self._name, 'default_res_id': self.id}
+        }
+    
     def action_download_and_parse_pdf(self):
         """Download PDF from Gmail and parse transactions"""
         for record in self:
