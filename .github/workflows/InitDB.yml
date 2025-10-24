@@ -1,16 +1,13 @@
 name: Initialize Odoo Database
 
 on:
+  # Manual trigger only - you control when to run this
   workflow_dispatch:
-    inputs:
-      action:
-        description: 'Database Action'
-        required: true
-        type: choice
-        options:
-          - 'Install GMailer (keep existing data)'
-          - 'Complete Database Reset (DANGER: deletes all data)'
-        default: 'Install GMailer (keep existing data)'
+  
+  # OR uncomment below to run automatically on push to main
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   init-database:
@@ -24,31 +21,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build initialization Docker image
-        run: docker build -f Dockerfile.init -t odoo-init .
-
-      - name: Install PostgreSQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: Complete Database Reset
-        if: github.event.inputs.action == 'Complete Database Reset (DANGER: deletes all data)'
-        env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
-          PGSSLMODE: require
-        run: |
-          echo "WARNING: Dropping all tables from database..."
-          echo "Database: ${PGDATABASE}"
-          echo ""
-          
-          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ${PGUSER}; GRANT ALL ON SCHEMA public TO public;"
-          
-          echo "Database wiped clean!"
-          echo ""
+          docker build -f Dockerfile.init -t odoo-init .
 
       - name: Run database initialization
         env:
@@ -59,10 +33,6 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "Starting database initialization..."
-          echo "Action: ${{ github.event.inputs.action }}"
-          echo ""
-          
           docker run --rm \
             -e PGHOST="${PGHOST}" \
             -e PGPORT="${PGPORT}" \
@@ -74,16 +44,5 @@ jobs:
 
       - name: Initialization Complete
         run: |
-          echo ""
-          echo "Database operation completed successfully!"
-          echo ""
-          if [ "${{ github.event.inputs.action }}" == "Complete Database Reset (DANGER: deletes all data)" ]; then
-            echo "Database has been completely reset and reinitialized"
-            echo "Installed modules: base, account, sale_management, GMailer"
-            echo "Login credentials: admin / admin"
-          else
-            echo "GMailer module has been installed/updated"
-            echo "Use your existing login credentials"
-          fi
-          echo ""
+          echo "✅ Database initialization completed successfully!"
           echo "Your Odoo database is now ready to use."
