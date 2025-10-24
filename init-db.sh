@@ -28,7 +28,7 @@ if ! PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}
         --database="${PGDATABASE}" \
         --db_sslmode="${PGSSLMODE:-disable}" \
         --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
-        -i base,account,sale_management,GMailer \
+        -i base,GMailer \
         --stop-after-init \
         --without-demo=all \
         --db_maxconn=1
