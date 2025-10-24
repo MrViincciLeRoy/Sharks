@@ -8,14 +8,16 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies for GMailer addon
+# Install Python dependencies for GMailer addon + PDF parsing
 RUN pip3 install --no-cache-dir \
     google-auth \
     google-auth-oauthlib \
     google-auth-httplib2 \
     google-api-python-client \
     beautifulsoup4 \
-    requests
+    requests \
+    PyPDF2 \
+    pdfplumber
 
 # Copy both scripts into the container
 COPY init-db.sh /init-db.sh
