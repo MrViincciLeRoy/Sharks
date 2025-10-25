@@ -1,5 +1,5 @@
 {
-    'name': 'Email Statement Importer',
+    'name': 'GMailer',  # FIXED: Must match folder name
     'version': '1.0',
     'category': 'Accounting',
     'summary': 'Import bank statements from Gmail using Google Auth',
@@ -16,7 +16,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/google_credentials_views.xml',
-        'views/bank_transaction_views.xml',  # MOVED BEFORE email_statement_views.xml
+        'views/bank_transaction_views.xml',
         'views/email_statement_views.xml',
         'data/cron_jobs.xml',
     ],
