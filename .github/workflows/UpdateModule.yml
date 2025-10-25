@@ -1,0 +1,44 @@
+name: Update GMailer Module
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-module:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          echo "🏗️  Building Docker image..."
+          docker build -f Dockerfile.update -t odoo-update .
+
+      - name: Update GMailer module
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🔄 Updating GMailer module..."
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-update
+
+      - name: Update Complete
+        run: |
+          echo "✅ GMailer module updated successfully!"
+          echo "Your addon now has the latest fixes."
