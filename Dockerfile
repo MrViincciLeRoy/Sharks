@@ -19,7 +19,7 @@ RUN pip3 install --no-cache-dir \
     requests \
     PyPDF2 \
     pdfplumber
-
+RUN pip3 install --no-cache-dir --upgrade PyPDF2
 # Copy both scripts into the container
 COPY init-db.sh /init-db.sh
 COPY entrypoint.sh /entrypoint.sh
