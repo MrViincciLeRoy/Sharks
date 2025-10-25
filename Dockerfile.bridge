@@ -1,0 +1,22 @@
+FROM odoo:17.0
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
+
+RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
+    chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
+
+COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
+COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
+
+COPY install-bridge.sh /install-bridge.sh
+RUN chmod +x /install-bridge.sh
+
+USER odoo
+CMD ["/install-bridge.sh"]

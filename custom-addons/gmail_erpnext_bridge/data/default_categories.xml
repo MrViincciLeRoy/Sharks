@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="category_transport" model="transaction.category">
+            <field name="name">Transport</field>
+            <field name="erpnext_account">Transport Expenses - Company</field>
+            <field name="transaction_type">expense</field>
+            <field name="keywords">uber, bolt, taxi, transport, fuel, petrol</field>
+        </record>
+
+        <record id="category_food" model="transaction.category">
+            <field name="name">Food &amp; Beverages</field>
+            <field name="erpnext_account">Food Expenses - Company</field>
+            <field name="transaction_type">expense</field>
+            <field name="keywords">restaurant, coffee, lunch, dinner, food, cafe</field>
+        </record>
+
+        <record id="category_office" model="transaction.category">
+            <field name="name">Office Supplies</field>
+            <field name="erpnext_account">Office Expenses - Company</field>
+            <field name="transaction_type">expense</field>
+            <field name="keywords">stationery, office, supplies, printer</field>
+        </record>
+
+        <record id="category_utilities" model="transaction.category">
+            <field name="name">Utilities</field>
+            <field name="erpnext_account">Utilities - Company</field>
+            <field name="transaction_type">expense</field>
+            <field name="keywords">electricity, water, internet, mobile, telkom</field>
+        </record>
+
+        <record id="category_salary" model="transaction.category">
+            <field name="name">Salary Payment</field>
+            <field name="erpnext_account">Salary - Company</field>
+            <field name="transaction_type">expense</field>
+            <field name="keywords">salary, wages, payment</field>
+        </record>
+
+        <record id="category_income" model="transaction.category">
+            <field name="name">Customer Payment</field>
+            <field name="erpnext_account">Sales - Company</field>
+            <field name="transaction_type">income</field>
+            <field name="keywords">payment received, deposit, income</field>
+        </record>
+
+        <record id="category_transfer" model="transaction.category">
+            <field name="name">Bank Transfer</field>
+            <field name="erpnext_account">Bank Account - Company</field>
+            <field name="transaction_type">transfer</field>
+            <field name="keywords">transfer, own account</field>
+        </record>
+    </data>
+</odoo>

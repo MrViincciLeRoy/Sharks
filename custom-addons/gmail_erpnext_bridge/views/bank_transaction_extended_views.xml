@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Server Actions -->
+    <record id="action_bulk_auto_categorize" model="ir.actions.server">
+        <field name="name">🏷️ Auto-Categorize All</field>
+        <field name="model_id" ref="GMailer.model_bank_transaction"/>
+        <field name="state">code</field>
+        <field name="code">
+result = model.action_bulk_auto_categorize()
+        </field>
+    </record>
+
+    <record id="action_bulk_sync_erpnext" model="ir.actions.server">
+        <field name="name">⬆️ Sync to ERPNext</field>
+        <field name="model_id" ref="GMailer.model_bank_transaction"/>
+        <field name="state">code</field>
+        <field name="code">
+result = model.action_bulk_sync_to_erpnext()
+        </field>
+    </record>
+
+    <!-- Extended Form View -->
+    <record id="view_bank_transaction_form_extended" model="ir.ui.view">
+        <field name="name">bank.transaction.form.extended</field>
+        <field name="model">bank.transaction</field>
+        <field name="inherit_id" ref="GMailer.view_bank_transaction_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_auto_categorize" 
+                        string="Auto-Categorize" 
+                        type="object" 
+                        invisible="category_id or erpnext_synced"
+                        icon="fa-magic"/>
+                <button name="action_sync_to_erpnext" 
+                        string="⬆️ Sync to ERPNext" 
+                        type="object" 
+                        class="oe_highlight"
+                        invisible="not is_categorized or erpnext_synced"
+                        confirm="This will create a Journal Entry in ERPNext. Continue?"/>
+                <field name="erpnext_synced" invisible="1"/>
+                <field name="is_categorized" invisible="1"/>
+            </xpath>
+
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="category_id" 
+                       options="{'no_create': True, 'no_open': True}"
+                       invisible="erpnext_synced"/>
+            </xpath>
+
+            <xpath expr="//group[last()]" position="after">
+                <group string="ERPNext Sync" invisible="not erpnext_synced">
+                    <group>
+                        <field name="erpnext_journal_entry"/>
+                        <field name="erpnext_sync_date"/>
+                    </group>
+                    <group>
+                        <field name="erpnext_error" invisible="not erpnext_error"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extended Tree View -->
+    <record id="view_bank_transaction_tree_extended" model="ir.ui.view">
+        <field name="name">bank.transaction.tree.extended</field>
+        <field name="model">bank.transaction</field>
+        <field name="inherit_id" ref="GMailer.view_bank_transaction_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree" position="attributes">
+                <attribute name="decoration-success">erpnext_synced</attribute>
+                <attribute name="decoration-muted">not is_categorized</attribute>
+            </xpath>
+
+            <xpath expr="//tree" position="inside">
+                <header>
+                    <button name="%(action_bulk_auto_categorize)d" 
+                            type="action" 
+                            string="🏷️ Auto-Categorize All"/>
+                    <button name="%(action_bulk_sync_erpnext)d" 
+                            type="action" 
+                            string="⬆️ Sync to ERPNext" 
+                            class="btn-primary"/>
+                </header>
+            </xpath>
+
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="category_id"/>
+                <field name="is_categorized" invisible="1"/>
+                <field name="erpnext_synced" widget="boolean_toggle"/>
+                <field name="erpnext_journal_entry"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_bank_transaction_search_extended" model="ir.ui.view">
+        <field name="name">bank.transaction.search.extended</field>
+        <field name="model">bank.transaction</field>
+        <field name="arch" type="xml">
+            <search string="Bank Transactions">
+                <field name="description"/>
+                <field name="reference"/>
+                <field name="category_id"/>
+                <separator/>
+                <filter string="Uncategorized" 
+                        name="uncategorized" 
+                        domain="[('category_id', '=', False)]"/>
+                <filter string="Categorized" 
+                        name="categorized" 
+                        domain="[('is_categorized', '=', True)]"/>
+                <separator/>
+                <filter string="Not Synced" 
+                        name="not_synced" 
+                        domain="[('erpnext_synced', '=', False)]"/>
+                <filter string="Synced to ERPNext" 
+                        name="synced" 
+                        domain="[('erpnext_synced', '=', True)]"/>
+                <separator/>
+                <filter string="Ready to Sync" 
+                        name="ready_to_sync" 
+                        domain="[('is_categorized', '=', True), ('erpnext_synced', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Category" 
+                            name="group_category" 
+                            context="{'group_by': 'category_id'}"/>
+                    <filter string="Sync Status" 
+                            name="group_sync" 
+                            context="{'group_by': 'erpnext_synced'}"/>
+                    <filter string="Date" 
+                            name="group_date" 
+                            context="{'group_by': 'date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

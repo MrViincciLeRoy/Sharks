@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_erpnext_config_user,erpnext.config.user,model_erpnext_config,base.group_user,1,0,0,0
+access_erpnext_config_manager,erpnext.config.manager,model_erpnext_config,account.group_account_manager,1,1,1,1
+access_erpnext_sync_log_user,erpnext.sync.log.user,model_erpnext_sync_log,base.group_user,1,0,0,0
+access_erpnext_sync_log_manager,erpnext.sync.log.manager,model_erpnext_sync_log,account.group_account_manager,1,1,1,1

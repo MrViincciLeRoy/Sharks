@@ -1,0 +1,44 @@
+name: Install ERPNext Connector
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-erpnext:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          echo "🏗️  Building Docker image with ERPNext connector..."
+          docker build -f Dockerfile.erpnext -t odoo-erpnext .
+
+      - name: Install ERPNext Connector
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "📦 Installing erpnext_connector module..."
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-erpnext
+
+      - name: Installation Complete
+        run: |
+          echo "✅ ERPNext Connector installed successfully!"
+          echo "Configure it at: ERPNext → Configuration"

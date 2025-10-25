@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_erpnext_sync_log_tree" model="ir.ui.view">
+        <field name="name">erpnext.sync.log.tree</field>
+        <field name="model">erpnext.sync.log</field>
+        <field name="arch" type="xml">
+            <tree string="Sync Logs" decoration-success="status=='success'" decoration-danger="status=='failed'">
+                <field name="sync_date"/>
+                <field name="config_id"/>
+                <field name="record_type"/>
+                <field name="record_id"/>
+                <field name="erpnext_doctype"/>
+                <field name="erpnext_doc_name"/>
+                <field name="status"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_erpnext_sync_log_form" model="ir.ui.view">
+        <field name="name">erpnext.sync.log.form</field>
+        <field name="model">erpnext.sync.log</field>
+        <field name="arch" type="xml">
+            <form string="Sync Log">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="config_id"/>
+                            <field name="sync_date"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="record_type"/>
+                            <field name="record_id"/>
+                            <field name="erpnext_doctype"/>
+                            <field name="erpnext_doc_name"/>
+                        </group>
+                    </group>
+                    <group string="Error Message" invisible="not error_message">
+                        <field name="error_message" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_erpnext_sync_log" model="ir.actions.act_window">
+        <field name="name">Sync Logs</field>
+        <field name="res_model">erpnext.sync.log</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_erpnext_sync_log" 
+              name="Sync Logs" 
+              parent="menu_erpnext_root" 
+              action="action_erpnext_sync_log" 
+              sequence="20"/>
+</odoo>

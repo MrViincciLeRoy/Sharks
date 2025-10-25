@@ -2,14 +2,14 @@ FROM odoo:17.0
 
 USER root
 
-# Install PostgreSQL client for database checks
+# Install PostgreSQL client
 RUN apt-get update && \
     apt-get install -y --no-install-recommends postgresql-client && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
 
-# Install Python dependencies for GMailer addon + PDF parsing
+# Install Python dependencies
 RUN pip3 install --no-cache-dir \
     google-auth \
     google-auth-oauthlib \
@@ -20,32 +20,28 @@ RUN pip3 install --no-cache-dir \
     PyPDF2 \
     pdfplumber
 
-# Create directories first with proper permissions
+# Create directories
 RUN mkdir -p /mnt/extra-addons && \
     mkdir -p /var/lib/odoo && \
     chown -R odoo:odoo /mnt/extra-addons && \
     chown -R odoo:odoo /var/lib/odoo
 
-# Copy custom addons directory
+# Copy ALL custom addons
 COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
+COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
 
-# Copy only the init script
+# Copy init script
 COPY init-db.sh /init-db.sh
-
-# Make script executable
 RUN chmod +x /init-db.sh
 
-# Verify the addon is copied and show its structure for debugging
-RUN echo "=== VERIFICATION: Checking if /mnt/extra-addons exists ===" && \
+# Verify modules
+RUN echo "=== Verifying addon structure ===" && \
     ls -la /mnt/extra-addons/ && \
-    echo "=== VERIFICATION: Checking GMailer directory ===" && \
-    ls -la /mnt/extra-addons/GMailer/ && \
-    echo "=== VERIFICATION: Checking __manifest__.py ===" && \
-    test -f /mnt/extra-addons/GMailer/__manifest__.py && echo "✅ __manifest__.py found" || echo "❌ __manifest__.py NOT FOUND" && \
-    echo "=== VERIFICATION: Checking __init__.py ===" && \
-    test -f /mnt/extra-addons/GMailer/__init__.py && echo "✅ __init__.py found" || echo "❌ __init__.py NOT FOUND"
+    echo "=== GMailer ===" && ls -la /mnt/extra-addons/GMailer/ && \
+    echo "=== ERPNext Connector ===" && ls -la /mnt/extra-addons/erpnext_connector/ && \
+    echo "=== Bridge ===" && ls -la /mnt/extra-addons/gmail_erpnext_bridge/
 
 USER odoo
 
-# This will ONLY run the init script and exit
 CMD ["/init-db.sh"]

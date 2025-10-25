@@ -10,7 +10,7 @@
         - Invoice sync
         - Statement generation
     """,
-    'depends': ['base', 'account', 'investec_banking'],
+    'depends': ['base', 'account'],  # REMOVED investec_banking dependency
     'data': [
         'security/ir.model.access.csv',
         'views/erpnext_config_views.xml',

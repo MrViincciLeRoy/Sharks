@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_transaction_category_form" model="ir.ui.view">
+        <field name="name">transaction.category.form</field>
+        <field name="model">transaction.category</field>
+        <field name="arch" type="xml">
+            <form string="Transaction Category">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Category Name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="transaction_type"/>
+                            <field name="erpnext_account" placeholder="e.g., Expenses - Company"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="color" widget="color_picker"/>
+                        </group>
+                    </group>
+                    <group string="Auto-Categorization">
+                        <field name="keywords" placeholder="uber, bolt, taxi, transport (comma-separated)"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_transaction_category_tree" model="ir.ui.view">
+        <field name="name">transaction.category.tree</field>
+        <field name="model">transaction.category</field>
+        <field name="arch" type="xml">
+            <tree string="Transaction Categories">
+                <field name="name"/>
+                <field name="transaction_type"/>
+                <field name="erpnext_account"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_transaction_category" model="ir.actions.act_window">
+        <field name="name">Transaction Categories</field>
+        <field name="res_model">transaction.category</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_transaction_category" 
+              name="Categories" 
+              parent="GMailer.menu_statement_importer_root" 
+              action="action_transaction_category" 
+              sequence="35"/>
+</odoo>
