@@ -8,6 +8,7 @@ import re
 from datetime import datetime
 import logging
 import io
+import pytz
 
 _logger = logging.getLogger(__name__)
 
@@ -28,8 +29,8 @@ class EmailStatement(models.Model):
     body_html = fields.Html(string='Body HTML')
     body_text = fields.Text(string='Body Text')
     attachment_count = fields.Integer(string='Attachments', compute='_compute_attachment_count')
-    transaction_ids = fields.One2many('bank.transaction', 'statement_id', string='Transactions')
-    transaction_count = fields.Integer(string='Transactions', compute='_compute_transaction_count')
+    transaction_ids = fields.One2many('bank.transaction', 'statement_id', string='Transaction Lines')
+    transaction_count = fields.Integer(string='Transaction Count', compute='_compute_transaction_count')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('parsed', 'Parsed'),
@@ -411,11 +412,17 @@ class EmailStatement(models.Model):
                 
                 _logger.info(f"Importing: {subject} from {sender}")
                 
-                # Parse date
+                # Parse date and convert to naive datetime (Odoo requirement)
                 from email.utils import parsedate_to_datetime
                 try:
                     msg_date = parsedate_to_datetime(date_str)
-                except:
+                    # Convert timezone-aware datetime to naive UTC datetime
+                    if msg_date.tzinfo is not None:
+                        import pytz
+                        # Convert to UTC and remove timezone info
+                        msg_date = msg_date.astimezone(pytz.UTC).replace(tzinfo=None)
+                except Exception as date_error:
+                    _logger.warning(f"Error parsing date '{date_str}': {str(date_error)}")
                     msg_date = fields.Datetime.now()
                 
                 # Extract body
