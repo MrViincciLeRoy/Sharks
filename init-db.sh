@@ -20,6 +20,7 @@ if ! PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}
     echo "=== Using increased lock timeout (5 minutes) ==="
     
     # Run Odoo initialization with increased timeouts
+    # FIXED: Removed --db_maxconn=1 to allow multiple connections
     odoo \
         --db_host="${PGHOST}" \
         --db_port="${PGPORT:-5432}" \
@@ -28,13 +29,13 @@ if ! PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}
         --database="${PGDATABASE}" \
         --db_sslmode="${PGSSLMODE:-disable}" \
         --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
-        -i base, account, GMailer \
+        -i base,account,GMailer \
         --stop-after-init \
         --without-demo=all \
-        --db_maxconn=1
+        --workers=0
     
     echo "=== [INIT JOB] Database initialization successful! ==="
-    echo "=== Installed modules: base, account, sale_management, GMailer ==="
+    echo "=== Installed modules: base, account, GMailer ==="
     
     # Set admin password
     echo "=== Setting admin password... ==="
@@ -60,7 +61,7 @@ else
             --addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons \
             -i GMailer \
             --stop-after-init \
-            --db_maxconn=1
+            --workers=0
         echo "=== [INIT JOB] GMailer installation successful! ==="
     else
         echo "=== [INIT JOB] All modules already installed. ==="
