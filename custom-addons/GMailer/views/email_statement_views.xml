@@ -2,7 +2,7 @@
 <odoo>
     <!-- Action to trigger manual import -->
     <record id="action_fetch_gmail_statements" model="ir.actions.server">
-        <field name="name">? Import from Gmail</field>
+        <field name="name">📧 Import from Gmail</field>
         <field name="model_id" ref="model_email_statement"/>
         <field name="state">code</field>
         <field name="code">
@@ -19,7 +19,7 @@ result = model.fetch_statements_from_gmail()
                 <header>
                     <button name="%(action_fetch_gmail_statements)d" 
                             type="action" 
-                            string="? Import from Gmail" 
+                            string="📧 Import from Gmail" 
                             class="btn-primary"/>
                 </header>
                 <field name="date"/>
@@ -35,7 +35,7 @@ result = model.fetch_statements_from_gmail()
         </field>
     </record>
 
-    <!-- Form view with PDF download -->
+    <!-- Form view with PDF download and password field -->
     <record id="view_email_statement_form" model="ir.ui.view">
         <field name="name">email.statement.form</field>
         <field name="model">email.statement</field>
@@ -43,7 +43,7 @@ result = model.fetch_statements_from_gmail()
             <form string="Email Statement">
                 <header>
                     <button name="action_download_and_parse_pdf" 
-                            string="? Download &amp; Parse PDF" 
+                            string="🔓 Download &amp; Parse PDF" 
                             type="object" 
                             class="oe_highlight" 
                             invisible="state != 'draft'"/>
@@ -77,8 +77,19 @@ result = model.fetch_statements_from_gmail()
                         <group>
                             <field name="gmail_id"/>
                             <field name="has_pdf" widget="boolean_toggle"/>
+                            <field name="pdf_password" 
+                                   password="True" 
+                                   placeholder="Enter PDF password if protected"
+                                   invisible="state != 'draft'"/>
                         </group>
                     </group>
+                    
+                    <!-- Password hint alert -->
+                    <div class="alert alert-info" role="alert" invisible="state != 'draft'">
+                        <strong>💡 Tip:</strong> If the PDF is password protected, enter the password above before clicking "Download &amp; Parse PDF".
+                        <br/>Common passwords: ID number, last 4 digits of account number, date of birth (DDMMYYYY)
+                    </div>
+                    
                     <notebook>
                         <page string="Transactions">
                             <field name="transaction_ids">
@@ -103,7 +114,6 @@ result = model.fetch_statements_from_gmail()
         </field>
     </record>
 
-    <!-- Add method to view attachments -->
     <record id="action_email_statement" model="ir.actions.act_window">
         <field name="name">Email Statements</field>
         <field name="res_model">email.statement</field>
