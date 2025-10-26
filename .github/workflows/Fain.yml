@@ -1,15 +1,15 @@
-name: Gentle Database Reset (Truncate Only)
+name: Complete Database Reset (Drop All Tables)
 
 on:
   workflow_dispatch:
     inputs:
       confirm_reset:
-        description: 'Type "RESET" to confirm data wipe'
+        description: 'Type "RESET" to confirm complete wipe'
         required: true
         default: ''
 
 jobs:
-  gentle-reset:
+  complete-reset:
     runs-on: ubuntu-latest
     
     steps:
@@ -19,7 +19,7 @@ jobs:
             echo "❌ Confirmation failed. You must type 'RESET' to proceed."
             exit 1
           fi
-          echo "✅ Confirmation received. Proceeding with database reset..."
+          echo "✅ Confirmation received. Proceeding with complete reset..."
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Truncate all tables (preserves structure)
+      - name: Drop ALL database objects (tables, views, sequences, functions)
         env:
           PGHOST: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
@@ -38,88 +38,89 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "🧹 Truncating all tables in database: ${PGDATABASE}"
-          echo "Note: This preserves table structure but removes all data"
+          echo "🗑️  Dropping ALL objects from database: ${PGDATABASE}"
+          echo "This will remove tables, sequences, views, functions, and types"
           
           PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" << 'EOF'
           DO $$ 
           DECLARE
               r RECORD;
-              truncate_stmt TEXT := 'TRUNCATE TABLE ';
-              first_table BOOLEAN := TRUE;
           BEGIN
-              -- Build a single TRUNCATE statement for all tables
+              -- Drop all views first (they might depend on tables)
+              FOR r IN (
+                  SELECT table_name 
+                  FROM information_schema.views 
+                  WHERE table_schema = 'public'
+              )
+              LOOP
+                  EXECUTE 'DROP VIEW IF EXISTS public.' || quote_ident(r.table_name) || ' CASCADE';
+                  RAISE NOTICE 'Dropped view: %', r.table_name;
+              END LOOP;
+              
+              -- Drop all materialized views
+              FOR r IN (
+                  SELECT matviewname 
+                  FROM pg_matviews 
+                  WHERE schemaname = 'public'
+              )
+              LOOP
+                  EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.' || quote_ident(r.matviewname) || ' CASCADE';
+                  RAISE NOTICE 'Dropped materialized view: %', r.matviewname;
+              END LOOP;
+              
+              -- Drop all tables with CASCADE to handle foreign keys
               FOR r IN (
                   SELECT tablename 
                   FROM pg_tables 
                   WHERE schemaname = 'public'
-                  ORDER BY tablename
               ) 
               LOOP
-                  IF first_table THEN
-                      truncate_stmt := truncate_stmt || quote_ident(r.tablename);
-                      first_table := FALSE;
-                  ELSE
-                      truncate_stmt := truncate_stmt || ', ' || quote_ident(r.tablename);
-                  END IF;
+                  EXECUTE 'DROP TABLE IF EXISTS public.' || quote_ident(r.tablename) || ' CASCADE';
+                  RAISE NOTICE 'Dropped table: %', r.tablename;
               END LOOP;
               
-              -- Add CASCADE and RESTART IDENTITY
-              IF NOT first_table THEN
-                  truncate_stmt := truncate_stmt || ' RESTART IDENTITY CASCADE';
-                  RAISE NOTICE 'Executing: %', truncate_stmt;
-                  EXECUTE truncate_stmt;
-                  RAISE NOTICE '✅ All tables truncated successfully';
-              ELSE
-                  RAISE NOTICE '⚠️ No tables found to truncate';
-              END IF;
-          END $$;
-          EOF
-          
-          echo "✅ All data cleared from database"
-
-      - name: Drop remaining constraints and indexes
-        env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
-          PGSSLMODE: require
-        run: |
-          echo "🔧 Cleaning up constraints and indexes for fresh init..."
-          
-          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" << 'EOF'
-          DO $$ 
-          DECLARE
-              r RECORD;
-          BEGIN
-              -- Drop all foreign key constraints
+              -- Drop all sequences
               FOR r IN (
-                  SELECT constraint_name, table_name
-                  FROM information_schema.table_constraints
-                  WHERE constraint_type = 'FOREIGN KEY'
-                    AND table_schema = 'public'
-              ) 
-              LOOP
-                  EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS %I CASCADE', 
-                                r.table_name, r.constraint_name);
-              END LOOP;
-              
-              -- Drop all indexes (except primary keys)
-              FOR r IN (
-                  SELECT indexname, tablename
-                  FROM pg_indexes
-                  WHERE schemaname = 'public'
-                    AND indexname NOT LIKE '%_pkey'
+                  SELECT sequence_name 
+                  FROM information_schema.sequences 
+                  WHERE sequence_schema = 'public'
               )
               LOOP
-                  EXECUTE format('DROP INDEX IF EXISTS %I CASCADE', r.indexname);
+                  EXECUTE 'DROP SEQUENCE IF EXISTS public.' || quote_ident(r.sequence_name) || ' CASCADE';
+                  RAISE NOTICE 'Dropped sequence: %', r.sequence_name;
               END LOOP;
               
-              RAISE NOTICE '✅ Constraints and indexes cleaned';
+              -- Drop all functions
+              FOR r IN (
+                  SELECT proname, 
+                         oidvectortypes(proargtypes) as argtypes
+                  FROM pg_proc 
+                  INNER JOIN pg_namespace ns ON (pg_proc.pronamespace = ns.oid)
+                  WHERE ns.nspname = 'public'
+              )
+              LOOP
+                  EXECUTE 'DROP FUNCTION IF EXISTS public.' || quote_ident(r.proname) || 
+                          '(' || r.argtypes || ') CASCADE';
+                  RAISE NOTICE 'Dropped function: %', r.proname;
+              END LOOP;
+              
+              -- Drop all custom types
+              FOR r IN (
+                  SELECT typname
+                  FROM pg_type
+                  WHERE typnamespace = 'public'::regnamespace
+                    AND typtype = 'c'
+              )
+              LOOP
+                  EXECUTE 'DROP TYPE IF EXISTS public.' || quote_ident(r.typname) || ' CASCADE';
+                  RAISE NOTICE 'Dropped type: %', r.typname;
+              END LOOP;
+              
+              RAISE NOTICE '✅ All database objects dropped successfully';
           END $$;
           EOF
+          
+          echo "✅ Database completely cleared"
 
       - name: Verify database is empty
         env:
@@ -130,31 +131,28 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "🔍 Verifying tables are empty..."
+          echo "🔍 Verifying database is empty..."
           
-          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" << 'EOF'
-          DO $$ 
-          DECLARE
-              r RECORD;
-              total_rows BIGINT := 0;
-              table_count INT := 0;
-          BEGIN
-              FOR r IN (
-                  SELECT tablename 
-                  FROM pg_tables 
-                  WHERE schemaname = 'public'
-                  ORDER BY tablename
-                  LIMIT 5
-              ) 
-              LOOP
-                  EXECUTE format('SELECT COUNT(*) FROM %I', r.tablename) INTO total_rows;
-                  RAISE NOTICE 'Sample: Table % has % rows', r.tablename, total_rows;
-                  table_count := table_count + 1;
-              END LOOP;
-              
-              RAISE NOTICE '✅ Database ready for reinitialization';
-          END $$;
-          EOF
+          TABLE_COUNT=$(PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -tAc \
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          
+          VIEW_COUNT=$(PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -tAc \
+            "SELECT COUNT(*) FROM information_schema.views WHERE table_schema = 'public';")
+          
+          SEQ_COUNT=$(PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -tAc \
+            "SELECT COUNT(*) FROM information_schema.sequences WHERE sequence_schema = 'public';")
+          
+          echo "📊 Database status:"
+          echo "  - Tables: ${TABLE_COUNT}"
+          echo "  - Views: ${VIEW_COUNT}"
+          echo "  - Sequences: ${SEQ_COUNT}"
+          
+          if [ "$TABLE_COUNT" -eq "0" ] && [ "$VIEW_COUNT" -eq "0" ] && [ "$SEQ_COUNT" -eq "0" ]; then
+            echo "✅ Database is completely clean!"
+          else
+            echo "⚠️ Warning: Some objects still exist"
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -164,7 +162,7 @@ jobs:
           echo "🏗️  Building Docker image..."
           docker build -f Dockerfile.init -t odoo-init .
 
-      - name: Reinitialize Odoo (Fresh Install Mode)
+      - name: Initialize Fresh Odoo Database
         env:
           PGHOST: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
@@ -173,9 +171,7 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "🚀 Reinitializing Odoo in fresh install mode..."
-          echo "This will detect the truncated database and perform a clean install"
-          
+          echo "🚀 Installing Odoo with all modules..."
           docker run --rm \
             -e PGHOST="${PGHOST}" \
             -e PGPORT="${PGPORT}" \
@@ -187,15 +183,25 @@ jobs:
 
       - name: Reset Complete
         run: |
-          echo "✅ Gentle database reset completed!"
+          echo "✅ Complete database reset finished!"
           echo ""
-          echo "📋 What happened:"
-          echo "  1. ✅ Truncated all tables (preserved structure)"
-          echo "  2. ✅ Dropped constraints and indexes"
-          echo "  3. ✅ Fresh Odoo installation initialized"
+          echo "📋 What was done:"
+          echo "  1. ✅ Dropped all views and materialized views"
+          echo "  2. ✅ Dropped all tables with CASCADE"
+          echo "  3. ✅ Dropped all sequences"
+          echo "  4. ✅ Dropped all functions and types"
+          echo "  5. ✅ Verified database is empty"
+          echo "  6. ✅ Fresh Odoo installation completed"
+          echo ""
+          echo "📦 Installed modules:"
+          echo "  • base"
+          echo "  • account"
+          echo "  • GMailer"
+          echo "  • erpnext_connector"
+          echo "  • gmail_erpnext_bridge"
           echo ""
           echo "🔐 Default credentials:"
           echo "  Username: admin"
           echo "  Password: admin"
           echo ""
-          echo "Your database is ready to use!"
+          echo "🎉 Your Odoo database is ready!"
