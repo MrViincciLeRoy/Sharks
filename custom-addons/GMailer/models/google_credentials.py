@@ -23,6 +23,11 @@ class GoogleCredentials(models.Model):
     def action_authenticate(self):
         """Redirect to Google OAuth page"""
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url')
+        
+        # FORCE HTTPS - Google requires it for Gmail scope
+        if base_url.startswith('http://'):
+            base_url = base_url.replace('http://', 'https://', 1)
+        
         redirect_uri = f"{base_url}/google_auth/callback"
         
         auth_url = (
