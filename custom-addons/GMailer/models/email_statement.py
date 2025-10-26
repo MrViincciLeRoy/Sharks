@@ -38,6 +38,7 @@ class EmailStatement(models.Model):
     ], default='draft', string='Status')
     has_pdf = fields.Boolean(string='Has PDF', default=False)
     pdf_password = fields.Char(string='PDF Password', help='Password to unlock PDF if protected')
+    parsing_log = fields.Text(string='Parsing Log', readonly=True, help='Debug information from PDF parsing')
     
     @api.depends('sender')
     def _compute_bank_name(self):
@@ -150,7 +151,7 @@ class EmailStatement(models.Model):
                         'tag': 'display_notification',
                         'params': {
                             'title': 'Success',
-                            'message': 'PDF downloaded and parsed successfully!',
+                            'message': f'PDF parsed! Found {record.transaction_count} transactions. Check the Parsing Log tab for details.',
                             'type': 'success',
                         }
                     }
@@ -163,6 +164,9 @@ class EmailStatement(models.Model):
     
     def _parse_pdf_transactions(self, pdf_data):
         """Parse PDF and extract transaction data"""
+        parsing_log = []
+        parsing_log.append("=== PDF PARSING DEBUG LOG ===\n")
+        
         try:
             # Try to import PyPDF2 or pdfplumber
             try:
@@ -170,9 +174,11 @@ class EmailStatement(models.Model):
                 pdf_file = io.BytesIO(pdf_data)
                 pdf_reader = PyPDF2.PdfReader(pdf_file)
                 
+                parsing_log.append(f"Using PyPDF2, found {len(pdf_reader.pages)} pages\n")
+                
                 # Check if PDF is encrypted
                 if pdf_reader.is_encrypted:
-                    _logger.info("PDF is password protected, attempting to decrypt...")
+                    parsing_log.append("PDF is password protected\n")
                     
                     if not self.pdf_password:
                         raise UserError(
@@ -187,18 +193,19 @@ class EmailStatement(models.Model):
                         raise UserError(
                             'Incorrect PDF password. Please check the password and try again.'
                         )
-                    elif decrypt_result == 1:
-                        _logger.info("PDF decrypted successfully with user password")
-                    elif decrypt_result == 2:
-                        _logger.info("PDF decrypted successfully with owner password")
+                    else:
+                        parsing_log.append("PDF decrypted successfully\n")
                 
                 # Extract text from all pages
                 text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
+                for i, page in enumerate(pdf_reader.pages):
+                    page_text = page.extract_text()
+                    text += page_text
+                    parsing_log.append(f"\n--- Page {i+1} (first 500 chars) ---\n")
+                    parsing_log.append(page_text[:500] + "...\n")
                     
             except ImportError:
-                _logger.warning("PyPDF2 not available, trying pdfplumber")
+                parsing_log.append("PyPDF2 not available, trying pdfplumber\n")
                 try:
                     import pdfplumber
                     pdf_file = io.BytesIO(pdf_data)
@@ -207,13 +214,19 @@ class EmailStatement(models.Model):
                     if self.pdf_password:
                         with pdfplumber.open(pdf_file, password=self.pdf_password) as pdf:
                             text = ""
-                            for page in pdf.pages:
-                                text += page.extract_text()
+                            for i, page in enumerate(pdf.pages):
+                                page_text = page.extract_text()
+                                text += page_text
+                                parsing_log.append(f"\n--- Page {i+1} (first 500 chars) ---\n")
+                                parsing_log.append(page_text[:500] + "...\n")
                     else:
                         with pdfplumber.open(pdf_file) as pdf:
                             text = ""
-                            for page in pdf.pages:
-                                text += page.extract_text()
+                            for i, page in enumerate(pdf.pages):
+                                page_text = page.extract_text()
+                                text += page_text
+                                parsing_log.append(f"\n--- Page {i+1} (first 500 chars) ---\n")
+                                parsing_log.append(page_text[:500] + "...\n")
                 except ImportError:
                     raise UserError(
                         'PDF parsing libraries not available. '
@@ -221,126 +234,171 @@ class EmailStatement(models.Model):
                         'pip install PyPDF2 pdfplumber'
                     )
             
-            _logger.info("PDF text extracted, parsing transactions...")
+            parsing_log.append(f"\n=== FULL TEXT LENGTH: {len(text)} characters ===\n")
             
             # Parse based on bank type
+            parsing_log.append(f"\nBank type: {self.bank_name}\n")
+            
             if self.bank_name == 'tymebank':
-                transactions = self._parse_tymebank_pdf(text)
+                transactions = self._parse_tymebank_pdf(text, parsing_log)
             elif self.bank_name == 'capitec':
-                transactions = self._parse_capitec_pdf(text)
+                transactions = self._parse_capitec_pdf(text, parsing_log)
             else:
-                transactions = self._parse_generic_pdf(text)
+                transactions = self._parse_generic_pdf(text, parsing_log)
+            
+            parsing_log.append(f"\n=== FOUND {len(transactions)} TRANSACTIONS ===\n")
             
             # Create transaction records
+            created_count = 0
             for trans in transactions:
-                self.env['bank.transaction'].create({
-                    'statement_id': self.id,
-                    'date': trans.get('date'),
-                    'description': trans.get('description'),
-                    'amount': trans.get('amount'),
-                    'transaction_type': trans.get('type'),
-                    'reference': trans.get('reference'),
-                })
+                try:
+                    parsing_log.append(f"\nCreating transaction: {trans}\n")
+                    self.env['bank.transaction'].create({
+                        'statement_id': self.id,
+                        'date': trans.get('date'),
+                        'description': trans.get('description'),
+                        'amount': trans.get('amount'),
+                        'transaction_type': trans.get('type'),
+                        'reference': trans.get('reference'),
+                    })
+                    created_count += 1
+                except Exception as e:
+                    parsing_log.append(f"ERROR creating transaction: {str(e)}\n")
+                    _logger.error(f"Failed to create transaction: {str(e)}")
             
-            _logger.info(f"Created {len(transactions)} transaction records")
+            parsing_log.append(f"\n=== SUCCESSFULLY CREATED {created_count} TRANSACTIONS ===\n")
+            
+            # Save the parsing log
+            self.parsing_log = ''.join(parsing_log)
+            
+            _logger.info(f"Created {created_count} transaction records")
             
         except UserError:
-            # Re-raise UserError as-is (these are user-friendly messages)
+            # Save log even on user errors
+            self.parsing_log = ''.join(parsing_log)
             raise
         except Exception as e:
+            parsing_log.append(f"\n=== FATAL ERROR ===\n{str(e)}\n")
+            self.parsing_log = ''.join(parsing_log)
             _logger.error(f"Error parsing PDF: {str(e)}")
             raise UserError(f'Failed to parse PDF: {str(e)}')
     
-    def _parse_tymebank_pdf(self, text):
+    def _parse_tymebank_pdf(self, text, log):
         """Parse TymeBank PDF statement"""
         transactions = []
+        log.append("\n=== TRYING TYMEBANK PATTERNS ===\n")
         
-        # TymeBank transaction pattern (customize based on actual PDF format)
-        # Example: 01 Oct 2024    Purchase - Shop Name    -R123.45    R1000.00
-        pattern = r'(\d{2}\s+\w{3}\s+\d{4})\s+([^\t\n]+?)\s+(-?R[\d,]+\.\d{2})\s+(R[\d,]+\.\d{2})'
-        
-        matches = re.findall(pattern, text, re.MULTILINE)
-        
-        for match in matches:
-            try:
-                # Parse date: "01 Oct 2024"
-                trans_date = datetime.strptime(match[0], '%d %b %Y').date()
-                description = match[1].strip()
-                amount_str = match[2].replace('R', '').replace(',', '').strip()
-                amount = float(amount_str)
-                
-                transactions.append({
-                    'date': trans_date,
-                    'description': description,
-                    'amount': abs(amount),
-                    'type': 'debit' if amount < 0 else 'credit',
-                    'reference': f"TYME-{trans_date.strftime('%Y%m%d')}"
-                })
-            except Exception as e:
-                _logger.warning(f"Error parsing TymeBank transaction: {str(e)}")
-                continue
-        
-        return transactions
-    
-    def _parse_capitec_pdf(self, text):
-        """Parse Capitec Bank PDF statement"""
-        transactions = []
-        
-        # Capitec transaction pattern (customize based on actual PDF format)
-        # Example: 2024/10/01    Payment    Description    -123.45    1000.00
-        pattern = r'(\d{4}/\d{2}/\d{2})\s+([^\t\n]+?)\s+([^\t\n]+?)\s+(-?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})'
-        
-        matches = re.findall(pattern, text, re.MULTILINE)
-        
-        for match in matches:
-            try:
-                # Parse date: "2024/10/01"
-                trans_date = datetime.strptime(match[0], '%Y/%m/%d').date()
-                trans_type = match[1].strip()
-                description = match[2].strip()
-                amount_str = match[3].replace(',', '').strip()
-                amount = float(amount_str)
-                
-                transactions.append({
-                    'date': trans_date,
-                    'description': f"{trans_type} - {description}",
-                    'amount': abs(amount),
-                    'type': 'debit' if amount < 0 else 'credit',
-                    'reference': f"CAP-{trans_date.strftime('%Y%m%d')}"
-                })
-            except Exception as e:
-                _logger.warning(f"Error parsing Capitec transaction: {str(e)}")
-                continue
-        
-        return transactions
-    
-    def _parse_generic_pdf(self, text):
-        """Generic PDF parsing - tries common patterns"""
-        transactions = []
-        
-        # Try multiple date formats and patterns
+        # Multiple patterns to try
         patterns = [
-            r'(\d{2}/\d{2}/\d{4})\s+([^\d\-\+]+)\s+(-?[\d,]+\.\d{2})',
-            r'(\d{4}-\d{2}-\d{2})\s+([^\d\-\+]+)\s+(-?[\d,]+\.\d{2})',
-            r'(\d{2}\s+\w{3}\s+\d{4})\s+([^\d\-\+]+)\s+(-?[\d,]+\.\d{2})',
+            # Pattern 1: 01 Oct 2024    Purchase - Shop Name    -R123.45    R1000.00
+            (r'(\d{2}\s+\w{3}\s+\d{4})\s+([^\t\n]+?)\s+(-?R[\d,]+\.\d{2})\s+(R[\d,]+\.\d{2})', '%d %b %Y'),
+            # Pattern 2: 2024-10-01    Description    -123.45    1000.00
+            (r'(\d{4}-\d{2}-\d{2})\s+([^\t\n]+?)\s+(-?R?[\d,]+\.\d{2})\s+(R?[\d,]+\.\d{2})', '%Y-%m-%d'),
+            # Pattern 3: 01/10/2024    Description    -123.45
+            (r'(\d{2}/\d{2}/\d{4})\s+([^\t\n]+?)\s+(-?R?[\d,]+\.\d{2})', '%d/%m/%Y'),
         ]
         
-        for pattern in patterns:
+        for pattern_idx, (pattern, date_format) in enumerate(patterns):
+            log.append(f"\nTrying pattern {pattern_idx + 1}: {pattern}\n")
             matches = re.findall(pattern, text, re.MULTILINE)
+            log.append(f"Found {len(matches)} matches\n")
+            
             if matches:
                 for match in matches:
                     try:
-                        # Try different date formats
+                        trans_date = datetime.strptime(match[0], date_format).date()
+                        description = match[1].strip()
+                        amount_str = match[2].replace('R', '').replace(',', '').strip()
+                        amount = float(amount_str)
+                        
+                        transactions.append({
+                            'date': trans_date,
+                            'description': description,
+                            'amount': abs(amount),
+                            'type': 'debit' if amount < 0 else 'credit',
+                            'reference': f"TYME-{trans_date.strftime('%Y%m%d')}"
+                        })
+                        log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
+                    except Exception as e:
+                        log.append(f"✗ Error parsing match: {str(e)}\n")
+                        continue
+                
+                if transactions:
+                    break  # Stop trying patterns if we found transactions
+        
+        return transactions
+    
+    def _parse_capitec_pdf(self, text, log):
+        """Parse Capitec Bank PDF statement"""
+        transactions = []
+        log.append("\n=== TRYING CAPITEC PATTERNS ===\n")
+        
+        patterns = [
+            (r'(\d{4}/\d{2}/\d{2})\s+([^\t\n]+?)\s+([^\t\n]+?)\s+(-?[\d,]+\.\d{2})\s+([\d,]+\.\d{2})', '%Y/%m/%d'),
+            (r'(\d{2}/\d{2}/\d{4})\s+([^\t\n]+?)\s+(-?R?[\d,]+\.\d{2})', '%d/%m/%Y'),
+        ]
+        
+        for pattern_idx, (pattern, date_format) in enumerate(patterns):
+            log.append(f"\nTrying pattern {pattern_idx + 1}: {pattern}\n")
+            matches = re.findall(pattern, text, re.MULTILINE)
+            log.append(f"Found {len(matches)} matches\n")
+            
+            if matches:
+                for match in matches:
+                    try:
+                        trans_date = datetime.strptime(match[0], date_format).date()
+                        if len(match) >= 4:
+                            trans_type = match[1].strip()
+                            description = f"{trans_type} - {match[2].strip()}"
+                            amount_str = match[3].replace(',', '').strip()
+                        else:
+                            description = match[1].strip()
+                            amount_str = match[2].replace('R', '').replace(',', '').strip()
+                        
+                        amount = float(amount_str)
+                        
+                        transactions.append({
+                            'date': trans_date,
+                            'description': description,
+                            'amount': abs(amount),
+                            'type': 'debit' if amount < 0 else 'credit',
+                            'reference': f"CAP-{trans_date.strftime('%Y%m%d')}"
+                        })
+                        log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
+                    except Exception as e:
+                        log.append(f"✗ Error parsing match: {str(e)}\n")
+                        continue
+                
+                if transactions:
+                    break
+        
+        return transactions
+    
+    def _parse_generic_pdf(self, text, log):
+        """Generic PDF parsing - tries common patterns"""
+        transactions = []
+        log.append("\n=== TRYING GENERIC PATTERNS ===\n")
+        
+        # Try multiple date formats and patterns
+        patterns = [
+            (r'(\d{2}/\d{2}/\d{4})\s+([^\d\-\+\$R]+)\s+(-?R?[\d,]+\.\d{2})', '%d/%m/%Y'),
+            (r'(\d{4}-\d{2}-\d{2})\s+([^\d\-\+\$R]+)\s+(-?R?[\d,]+\.\d{2})', '%Y-%m-%d'),
+            (r'(\d{2}\s+\w{3}\s+\d{4})\s+([^\d\-\+\$R]+)\s+(-?R?[\d,]+\.\d{2})', '%d %b %Y'),
+        ]
+        
+        for pattern_idx, (pattern, date_format) in enumerate(patterns):
+            log.append(f"\nTrying generic pattern {pattern_idx + 1}\n")
+            matches = re.findall(pattern, text, re.MULTILINE)
+            log.append(f"Found {len(matches)} matches\n")
+            
+            if matches:
+                for match in matches:
+                    try:
                         date_str = match[0]
-                        for date_format in ['%d/%m/%Y', '%Y-%m-%d', '%d %b %Y']:
-                            try:
-                                trans_date = datetime.strptime(date_str, date_format).date()
-                                break
-                            except:
-                                continue
+                        trans_date = datetime.strptime(date_str, date_format).date()
                         
                         description = match[1].strip()
-                        amount_str = match[2].replace(',', '').strip()
+                        amount_str = match[2].replace('R', '').replace(',', '').strip()
                         amount = float(amount_str)
                         
                         transactions.append({
@@ -350,7 +408,9 @@ class EmailStatement(models.Model):
                             'type': 'debit' if amount < 0 else 'credit',
                             'reference': f"GEN-{trans_date.strftime('%Y%m%d')}"
                         })
-                    except:
+                        log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
+                    except Exception as e:
+                        log.append(f"✗ Error: {str(e)}\n")
                         continue
                 
                 if transactions:
@@ -519,4 +579,4 @@ class EmailStatement(models.Model):
                 'type': 'success',
                 'sticky': False,
             }
-        }
+    }
