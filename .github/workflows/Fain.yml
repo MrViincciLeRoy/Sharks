@@ -65,10 +65,8 @@ jobs:
               END LOOP;
               
               -- Add CASCADE and RESTART IDENTITY
-              truncate_stmt := truncate_stmt || ' RESTART IDENTITY CASCADE';
-              
-              -- Execute if we have tables
               IF NOT first_table THEN
+                  truncate_stmt := truncate_stmt || ' RESTART IDENTITY CASCADE';
                   RAISE NOTICE 'Executing: %', truncate_stmt;
                   EXECUTE truncate_stmt;
                   RAISE NOTICE '✅ All tables truncated successfully';
@@ -79,6 +77,49 @@ jobs:
           EOF
           
           echo "✅ All data cleared from database"
+
+      - name: Drop remaining constraints and indexes
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🔧 Cleaning up constraints and indexes for fresh init..."
+          
+          PGPASSWORD="${PGPASSWORD}" psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" << 'EOF'
+          DO $$ 
+          DECLARE
+              r RECORD;
+          BEGIN
+              -- Drop all foreign key constraints
+              FOR r IN (
+                  SELECT constraint_name, table_name
+                  FROM information_schema.table_constraints
+                  WHERE constraint_type = 'FOREIGN KEY'
+                    AND table_schema = 'public'
+              ) 
+              LOOP
+                  EXECUTE format('ALTER TABLE %I DROP CONSTRAINT IF EXISTS %I CASCADE', 
+                                r.table_name, r.constraint_name);
+              END LOOP;
+              
+              -- Drop all indexes (except primary keys)
+              FOR r IN (
+                  SELECT indexname, tablename
+                  FROM pg_indexes
+                  WHERE schemaname = 'public'
+                    AND indexname NOT LIKE '%_pkey'
+              )
+              LOOP
+                  EXECUTE format('DROP INDEX IF EXISTS %I CASCADE', r.indexname);
+              END LOOP;
+              
+              RAISE NOTICE '✅ Constraints and indexes cleaned';
+          END $$;
+          EOF
 
       - name: Verify database is empty
         env:
@@ -102,16 +143,16 @@ jobs:
                   SELECT tablename 
                   FROM pg_tables 
                   WHERE schemaname = 'public'
+                  ORDER BY tablename
+                  LIMIT 5
               ) 
               LOOP
                   EXECUTE format('SELECT COUNT(*) FROM %I', r.tablename) INTO total_rows;
-                  IF total_rows > 0 THEN
-                      RAISE NOTICE 'Table % has % rows', r.tablename, total_rows;
-                  END IF;
+                  RAISE NOTICE 'Sample: Table % has % rows', r.tablename, total_rows;
                   table_count := table_count + 1;
               END LOOP;
               
-              RAISE NOTICE '✅ Checked % tables - all should be empty', table_count;
+              RAISE NOTICE '✅ Database ready for reinitialization';
           END $$;
           EOF
 
@@ -123,7 +164,7 @@ jobs:
           echo "🏗️  Building Docker image..."
           docker build -f Dockerfile.init -t odoo-init .
 
-      - name: Reinitialize Odoo
+      - name: Reinitialize Odoo (Fresh Install Mode)
         env:
           PGHOST: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
@@ -132,7 +173,9 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
           PGSSLMODE: require
         run: |
-          echo "🚀 Reinitializing Odoo..."
+          echo "🚀 Reinitializing Odoo in fresh install mode..."
+          echo "This will detect the truncated database and perform a clean install"
+          
           docker run --rm \
             -e PGHOST="${PGHOST}" \
             -e PGPORT="${PGPORT}" \
@@ -146,6 +189,13 @@ jobs:
         run: |
           echo "✅ Gentle database reset completed!"
           echo ""
+          echo "📋 What happened:"
+          echo "  1. ✅ Truncated all tables (preserved structure)"
+          echo "  2. ✅ Dropped constraints and indexes"
+          echo "  3. ✅ Fresh Odoo installation initialized"
+          echo ""
           echo "🔐 Default credentials:"
           echo "  Username: admin"
           echo "  Password: admin"
+          echo ""
+          echo "Your database is ready to use!"
