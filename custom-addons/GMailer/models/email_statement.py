@@ -37,6 +37,7 @@ class EmailStatement(models.Model):
         ('imported', 'Imported'),
     ], default='draft', string='Status')
     has_pdf = fields.Boolean(string='Has PDF', default=False)
+    pdf_password = fields.Char(string='PDF Password', help='Password to unlock PDF if protected')
     
     @api.depends('sender')
     def _compute_bank_name(self):
@@ -166,18 +167,53 @@ class EmailStatement(models.Model):
             # Try to import PyPDF2 or pdfplumber
             try:
                 import PyPDF2
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
+                pdf_file = io.BytesIO(pdf_data)
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                
+                # Check if PDF is encrypted
+                if pdf_reader.is_encrypted:
+                    _logger.info("PDF is password protected, attempting to decrypt...")
+                    
+                    if not self.pdf_password:
+                        raise UserError(
+                            'This PDF is password protected. '
+                            'Please enter the PDF password in the form and try again.'
+                        )
+                    
+                    # Try to decrypt with provided password
+                    decrypt_result = pdf_reader.decrypt(self.pdf_password)
+                    
+                    if decrypt_result == 0:
+                        raise UserError(
+                            'Incorrect PDF password. Please check the password and try again.'
+                        )
+                    elif decrypt_result == 1:
+                        _logger.info("PDF decrypted successfully with user password")
+                    elif decrypt_result == 2:
+                        _logger.info("PDF decrypted successfully with owner password")
+                
+                # Extract text from all pages
                 text = ""
                 for page in pdf_reader.pages:
                     text += page.extract_text()
+                    
             except ImportError:
                 _logger.warning("PyPDF2 not available, trying pdfplumber")
                 try:
                     import pdfplumber
-                    with pdfplumber.open(io.BytesIO(pdf_data)) as pdf:
-                        text = ""
-                        for page in pdf.pages:
-                            text += page.extract_text()
+                    pdf_file = io.BytesIO(pdf_data)
+                    
+                    # pdfplumber also supports password
+                    if self.pdf_password:
+                        with pdfplumber.open(pdf_file, password=self.pdf_password) as pdf:
+                            text = ""
+                            for page in pdf.pages:
+                                text += page.extract_text()
+                    else:
+                        with pdfplumber.open(pdf_file) as pdf:
+                            text = ""
+                            for page in pdf.pages:
+                                text += page.extract_text()
                 except ImportError:
                     raise UserError(
                         'PDF parsing libraries not available. '
@@ -208,6 +244,9 @@ class EmailStatement(models.Model):
             
             _logger.info(f"Created {len(transactions)} transaction records")
             
+        except UserError:
+            # Re-raise UserError as-is (these are user-friendly messages)
+            raise
         except Exception as e:
             _logger.error(f"Error parsing PDF: {str(e)}")
             raise UserError(f'Failed to parse PDF: {str(e)}')
@@ -348,9 +387,7 @@ class EmailStatement(models.Model):
             _logger.error(f"Failed to build Gmail service: {str(e)}")
             raise UserError(f'Failed to connect to Gmail: {str(e)}')
         
-        # ============================================
-        # SEARCH FOR BOTH TYMEBANK AND CAPITEC
-        # ============================================
+        # Search for both TymeBank and Capitec
         queries = [
             'from:@tymebank.co.za subject:Statement',
             'from:@capitecbank.co.za subject:Statement',
@@ -412,14 +449,11 @@ class EmailStatement(models.Model):
                 
                 _logger.info(f"Importing: {subject} from {sender}")
                 
-                # Parse date and convert to naive datetime (Odoo requirement)
+                # Parse date and convert to naive datetime
                 from email.utils import parsedate_to_datetime
                 try:
                     msg_date = parsedate_to_datetime(date_str)
-                    # Convert timezone-aware datetime to naive UTC datetime
                     if msg_date.tzinfo is not None:
-                        import pytz
-                        # Convert to UTC and remove timezone info
                         msg_date = msg_date.astimezone(pytz.UTC).replace(tzinfo=None)
                 except Exception as date_error:
                     _logger.warning(f"Error parsing date '{date_str}': {str(date_error)}")
@@ -464,12 +498,6 @@ class EmailStatement(models.Model):
                 
                 _logger.info(f"Created statement record ID: {statement.id}")
                 
-                # Automatically download and parse PDF
-                try:
-                    statement.action_download_and_parse_pdf()
-                except Exception as e:
-                    _logger.warning(f"Could not auto-parse PDF: {str(e)}")
-                
                 imported_count += 1
                 
             except Exception as e:
@@ -478,7 +506,6 @@ class EmailStatement(models.Model):
         
         _logger.info(f"Import complete: {imported_count} new, {skipped_count} skipped")
         
-        # Show user-friendly message
         message = f"Successfully imported {imported_count} statement(s)"
         if skipped_count > 0:
             message += f" ({skipped_count} already existed)"
