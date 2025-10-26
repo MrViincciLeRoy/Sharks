@@ -35,7 +35,7 @@ result = model.fetch_statements_from_gmail()
         </field>
     </record>
 
-    <!-- Form view with PDF download and password field -->
+    <!-- Form view with PDF download, password field, and parsing log -->
     <record id="view_email_statement_form" model="ir.ui.view">
         <field name="name">email.statement.form</field>
         <field name="model">email.statement</field>
@@ -101,6 +101,14 @@ result = model.fetch_statements_from_gmail()
                                     <field name="state"/>
                                 </tree>
                             </field>
+                        </page>
+                        <page string="Parsing Log" invisible="not parsing_log">
+                            <div class="alert alert-warning" role="alert">
+                                <strong>⚙️ Debug Information:</strong> This log shows what happened when parsing the PDF.
+                                <br/>Use this to troubleshoot if transactions are not appearing correctly.
+                            </div>
+                            <field name="parsing_log" widget="text" readonly="1" 
+                                   style="font-family: monospace; white-space: pre-wrap;"/>
                         </page>
                         <page string="HTML Content" invisible="not body_html">
                             <field name="body_html" widget="html"/>
