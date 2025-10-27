@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expense_analytics_form" model="ir.ui.view">
+        <field name="name">expense.analytics.form</field>
+        <field name="model">expense.analytics</field>
+        <field name="arch" type="xml">
+            <form string="Expense Analytics">
+                <header>
+                    <button name="action_refresh_analysis" 
+                            string="🔄 Refresh Analysis" 
+                            type="object" 
+                            class="oe_highlight"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Analysis Name"/></h1>
+                    </div>
+                    
+                    <group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                        <group>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Summary Cards -->
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane"/>
+                            <div class="o_setting_right_pane">
+                                <div class="content-group">
+                                    <div class="row">
+                                        <label class="col-lg-3 o_light_label" string="Total Expenses"/>
+                                        <field name="total_expenses" widget="monetary" class="text-danger fw-bold"/>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-lg-3 o_light_label" string="Total Income"/>
+                                        <field name="total_income" widget="monetary" class="text-success fw-bold"/>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-lg-3 o_light_label" string="Net Cashflow"/>
+                                        <field name="net_cashflow" widget="monetary" class="fw-bold"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane"/>
+                            <div class="o_setting_right_pane">
+                                <div class="content-group">
+                                    <div class="row">
+                                        <label class="col-lg-3 o_light_label" string="Avg Daily Expense"/>
+                                        <field name="avg_daily_expense" widget="monetary"/>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-lg-3 o_light_label" string="Avg Transaction"/>
+                                        <field name="avg_transaction_size" widget="monetary"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <notebook>
+                        <page string="Transaction Analysis">
+                            <group>
+                                <group string="Transaction Counts">
+                                    <field name="total_transactions"/>
+                                    <field name="categorized_count"/>
+                                    <field name="uncategorized_count"/>
+                                    <field name="categorization_rate" widget="percentage"/>
+                                </group>
+                                <group string="Top Category">
+                                    <field name="top_expense_category"/>
+                                    <field name="top_expense_amount" widget="monetary"/>
+                                </group>
+                            </group>
+                        </page>
+                        
+                        <page string="Trends">
+                            <group>
+                                <group>
+                                    <field name="expense_trend" widget="badge" 
+                                           decoration-success="expense_trend=='decreasing'"
+                                           decoration-warning="expense_trend=='stable'"
+                                           decoration-danger="expense_trend=='increasing'"/>
+                                    <field name="trend_percentage" widget="percentage"/>
+                                </group>
+                                <group>
+                                    <field name="unusual_transactions"/>
+                                </group>
+                            </group>
+                            <div class="alert alert-info mt16" role="alert">
+                                <strong>💡 Insight:</strong>
+                                <span invisible="expense_trend != 'increasing'">
+                                    Your expenses are trending upward. Consider reviewing your spending patterns.
+                                </span>
+                                <span invisible="expense_trend != 'decreasing'">
+                                    Great! Your expenses are decreasing.
+                                </span>
+                                <span invisible="expense_trend != 'stable'">
+                                    Your expenses are stable.
+                                </span>
+                            </div>
+                        </page>
+                        
+                        <page string="Notes">
+                            <field name="notes" nolabel="1" placeholder="Analysis notes and observations..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_expense_analytics_tree" model="ir.ui.view">
+        <field name="name">expense.analytics.tree</field>
+        <field name="model">expense.analytics</field>
+        <field name="arch" type="xml">
+            <tree string="Analytics Reports">
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="total_expenses" sum="Total"/>
+                <field name="total_income" sum="Total"/>
+                <field name="net_cashflow" sum="Total"/>
+                <field name="expense_trend" widget="badge"/>
+                <field name="categorization_rate" widget="percentage"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_expense_analytics" model="ir.actions.act_window">
+        <field name="name">Expense Analytics</field>
+        <field name="res_model">expense.analytics</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first analytics report
+            </p>
+            <p>
+                Analytics provide insights into your spending patterns and trends.
+            </p>
+        </field>
+    </record>
+
+    <!-- Transaction Insight Wizard -->
+    <record id="view_transaction_insight_wizard_form" model="ir.ui.view">
+        <field name="name">transaction.insight.wizard.form</field>
+        <field name="model">transaction.insight.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Insights">
+                <group>
+                    <field name="period"/>
+                    <field name="include_forecast"/>
+                    <field name="include_trends"/>
+                    <field name="include_anomalies"/>
+                </group>
+                <footer>
+                    <button name="action_generate_insights" 
+                            string="Generate Report" 
+                            type="object" 
+                            class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_transaction_insight_wizard" model="ir.actions.act_window">
+        <field name="name">Generate Insights</field>
+        <field name="res_model">transaction.insight.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_analytics" 
+              name="Analytics" 
+              parent="menu_expense_forecaster_root" 
+              action="action_expense_analytics" 
+              sequence="20"/>
+    
+    <menuitem id="menu_insights_wizard" 
+              name="Generate Insights" 
+              parent="menu_expense_forecaster_root" 
+              action="action_transaction_insight_wizard" 
+              sequence="25"/>
+</odoo>

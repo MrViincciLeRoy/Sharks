@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cashflow_projection_form" model="ir.ui.view">
+        <field name="name">cashflow.projection.form</field>
+        <field name="model">cashflow.projection</field>
+        <field name="arch" type="xml">
+            <form string="Cashflow Projection">
+                <header>
+                    <button name="action_generate_projection" 
+                            string="📊 Calculate Projection" 
+                            type="object" 
+                            class="oe_highlight"/>
+                    <field name="balance_status" widget="badge" 
+                           decoration-success="balance_status=='healthy'"
+                           decoration-warning="balance_status=='warning'"
+                           decoration-danger="balance_status=='critical'"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="projection_date"/></h1>
+                    </div>
+                    
+                    <!-- Visual Status Indicator -->
+                    <div class="alert mt16" role="alert"
+                         invisible="balance_status == 'healthy'"
+                         style="border-left: 4px solid;">
+                        <div invisible="balance_status != 'warning'" class="alert-warning">
+                            <strong>⚠️ Warning:</strong> Projected balance is close to minimum required.
+                        </div>
+                        <div invisible="balance_status != 'critical'" class="alert-danger">
+                            <strong>🚨 Critical:</strong> Projected balance is below minimum required!
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Opening Position">
+                            <field name="opening_balance" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Confidence">
+                            <field name="confidence_level" widget="percentage"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Expected Inflows">
+                            <field name="expected_income" widget="monetary" class="text-success"/>
+                            <field name="confirmed_income" widget="monetary"/>
+                        </group>
+                        <group string="Expected Outflows">
+                            <field name="expected_expenses" widget="monetary" class="text-danger"/>
+                            <field name="confirmed_expenses" widget="monetary"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Projected Closing">
+                            <field name="projected_balance" widget="monetary" class="fw-bold"/>
+                            <field name="minimum_balance" widget="monetary"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Related Forecasts">
+                            <field name="forecast_ids" nolabel="1">
+                                <tree>
+                                    <field name="forecast_type"/>
+                                    <field name="category_id"/>
+                                    <field name="predicted_amount"/>
+                                    <field name="confidence_score" widget="progressbar"/>
+                                    <field name="method"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes" nolabel="1" placeholder="Add projection notes..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_cashflow_projection_tree" model="ir.ui.view">
+        <field name="name">cashflow.projection.tree</field>
+        <field name="model">cashflow.projection</field>
+        <field name="arch" type="xml">
+            <tree string="Cashflow Projections" 
+                  decoration-success="balance_status=='healthy'"
+                  decoration-warning="balance_status=='warning'"
+                  decoration-danger="balance_status=='critical'">
+                <field name="projection_date"/>
+                <field name="opening_balance"/>
+                <field name="expected_income" sum="Total"/>
+                <field name="expected_expenses" sum="Total"/>
+                <field name="projected_balance" sum="Total"/>
+                <field name="minimum_balance"/>
+                <field name="balance_status" widget="badge"/>
+                <field name="confidence_level" widget="percentage"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_cashflow_projection_graph" model="ir.ui.view">
+        <field name="name">cashflow.projection.graph</field>
+        <field name="model">cashflow.projection</field>
+        <field name="arch" type="xml">
+            <graph string="Cashflow Forecast" type="line">
+                <field name="projection_date"/>
+                <field name="projected_balance" type="measure"/>
+                <field name="minimum_balance" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_cashflow_projection" model="ir.actions.act_window">
+        <field name="name">Cashflow Projections</field>
+        <field name="res_model">cashflow.projection</field>
+        <field name="view_mode">tree,form,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first cashflow projection
+            </p>
+            <p>
+                Projections help you understand future cash positions and plan accordingly.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_cashflow_projection" 
+              name="Cashflow Projections" 
+              parent="menu_expense_forecaster_root" 
+              action="action_cashflow_projection" 
+              sequence="30"/>
+</odoo>

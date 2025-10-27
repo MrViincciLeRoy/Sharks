@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Expense Forecast Views -->
+    <record id="view_expense_forecast_tree" model="ir.ui.view">
+        <field name="name">expense.forecast.tree</field>
+        <field name="model">expense.forecast</field>
+        <field name="arch" type="xml">
+            <tree string="Expense Forecasts" 
+                  decoration-success="status=='realized' and variance_percentage &lt; 10"
+                  decoration-warning="status=='realized' and variance_percentage &gt;= 10 and variance_percentage &lt; 25"
+                  decoration-danger="status=='realized' and variance_percentage &gt;= 25">
+                <field name="forecast_date"/>
+                <field name="category_id"/>
+                <field name="forecast_type" widget="badge" decoration-danger="forecast_type=='expense'" decoration-success="forecast_type=='income'"/>
+                <field name="predicted_amount" sum="Total Predicted"/>
+                <field name="actual_amount" sum="Total Actual"/>
+                <field name="variance" sum="Total Variance"/>
+                <field name="variance_percentage" widget="percentage"/>
+                <field name="confidence_score" widget="progressbar"/>
+                <field name="method"/>
+                <field name="status" widget="badge"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_expense_forecast_form" model="ir.ui.view">
+        <field name="name">expense.forecast.form</field>
+        <field name="model">expense.forecast</field>
+        <field name="arch" type="xml">
+            <form string="Expense Forecast">
+                <header>
+                    <field name="status" widget="statusbar" statusbar_visible="draft,confirmed,realized"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="forecast_date"/>
+                            <field name="forecast_type"/>
+                            <field name="category_id"/>
+                        </group>
+                        <group>
+                            <field name="predicted_amount" widget="monetary"/>
+                            <field name="confidence_score" widget="percentage"/>
+                            <field name="method"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Actual vs Forecast" invisible="status != 'realized'">
+                        <group>
+                            <field name="actual_amount" widget="monetary"/>
+                            <field name="variance" widget="monetary"/>
+                        </group>
+                        <group>
+                            <field name="variance_percentage" widget="percentage"/>
+                        </group>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" nolabel="1" placeholder="Additional forecast notes..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_expense_forecast_graph" model="ir.ui.view">
+        <field name="name">expense.forecast.graph</field>
+        <field name="model">expense.forecast</field>
+        <field name="arch" type="xml">
+            <graph string="Forecast Analysis" type="bar" stacked="True">
+                <field name="forecast_date" interval="month"/>
+                <field name="predicted_amount" type="measure"/>
+                <field name="forecast_type"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_expense_forecast_pivot" model="ir.ui.view">
+        <field name="name">expense.forecast.pivot</field>
+        <field name="model">expense.forecast</field>
+        <field name="arch" type="xml">
+            <pivot string="Forecast Pivot">
+                <field name="forecast_date" interval="month" type="col"/>
+                <field name="category_id" type="row"/>
+                <field name="predicted_amount" type="measure"/>
+                <field name="confidence_score" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_expense_forecast" model="ir.actions.act_window">
+        <field name="name">Expense Forecasts</field>
+        <field name="res_model">expense.forecast</field>
+        <field name="view_mode">tree,form,graph,pivot</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first forecast
+            </p>
+            <p>
+                Forecasts predict future expenses and income based on historical data.
+            </p>
+        </field>
+    </record>
+
+    <!-- Expense Forecaster (Engine) Views -->
+    <record id="view_expense_forecaster_form" model="ir.ui.view">
+        <field name="name">expense.forecaster.form</field>
+        <field name="model">expense.forecaster</field>
+        <field name="arch" type="xml">
+            <form string="Expense Forecaster">
+                <header>
+                    <button name="generate_forecasts" 
+                            string="🔮 Generate Forecasts" 
+                            type="object" 
+                            class="oe_highlight"
+                            confirm="This will generate forecasts for the next months. Continue?"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Forecaster Configuration"/></h1>
+                    </div>
+                    <group>
+                        <group string="Forecast Settings">
+                            <field name="forecast_period_months"/>
+                            <field name="historical_period_months"/>
+                            <field name="min_transactions_required"/>
+                        </group>
+                        <group string="Options">
+                            <field name="include_uncategorized"/>
+                            <field name="auto_update"/>
+                            <field name="last_run" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="How It Works">
+                        <div class="alert alert-info" role="alert">
+                            <strong>📊 Forecasting Methods:</strong>
+                            <ul>
+                                <li><strong>Recurring Pattern:</strong> Detects regular payments (subscriptions, salaries)</li>
+                                <li><strong>Trend Analysis:</strong> Identifies increasing/decreasing spending</li>
+                                <li><strong>Seasonal Adjustment:</strong> Accounts for monthly variations</li>
+                                <li><strong>Historical Average:</strong> Simple average of past transactions</li>
+                            </ul>
+                            <p class="mb-0">
+                                <em>The system automatically chooses the best method based on your data.</em>
+                            </p>
+                        </div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_expense_forecaster_tree" model="ir.ui.view">
+        <field name="name">expense.forecaster.tree</field>
+        <field name="model">expense.forecaster</field>
+        <field name="arch" type="xml">
+            <tree string="Forecasters">
+                <field name="name"/>
+                <field name="forecast_period_months"/>
+                <field name="historical_period_months"/>
+                <field name="include_uncategorized"/>
+                <field name="last_run"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_expense_forecaster" model="ir.actions.act_window">
+        <field name="name">Forecaster Configuration</field>
+        <field name="res_model">expense.forecaster</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_expense_forecaster_root" 
+              name="Expense Forecaster" 
+              sequence="45"/>
+    
+    <menuitem id="menu_forecasts" 
+              name="Forecasts" 
+              parent="menu_expense_forecaster_root" 
+              action="action_expense_forecast" 
+              sequence="10"/>
+    
+    <menuitem id="menu_forecaster_config" 
+              name="Configuration" 
+              parent="menu_expense_forecaster_root" 
+              action="action_expense_forecaster" 
+              sequence="50"/>
+</odoo>

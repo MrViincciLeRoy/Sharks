@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dashboard Action -->
+    <record id="action_expense_forecaster_dashboard" model="ir.actions.act_window">
+        <field name="name">Forecaster Dashboard</field>
+        <field name="res_model">expense.forecast</field>
+        <field name="view_mode">graph,pivot,tree</field>
+        <field name="domain">[('forecast_date', '&gt;=', (context_today() + relativedelta(months=-1)).strftime('%Y-%m-%d'))]</field>
+        <field name="context">{
+            'search_default_group_by_date': 1,
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No forecast data yet
+            </p>
+            <p>
+                Go to Configuration to generate your first forecasts.
+            </p>
+        </field>
+    </record>
+
+    <!-- Quick Actions Menu -->
+    <record id="action_quick_generate_forecasts" model="ir.actions.server">
+        <field name="name">🔮 Quick Generate Forecasts</field>
+        <field name="model_id" ref="model_expense_forecaster"/>
+        <field name="state">code</field>
+        <field name="code">
+forecaster = env['expense.forecaster'].search([], limit=1)
+if not forecaster:
+    forecaster = env['expense.forecaster'].create({'name': 'Default Forecaster'})
+result = forecaster.generate_forecasts()
+        </field>
+    </record>
+
+    <record id="action_quick_generate_projections" model="ir.actions.server">
+        <field name="name">📊 Quick Generate Projections</field>
+        <field name="model_id" ref="model_cashflow_projection"/>
+        <field name="state">code</field>
+        <field name="code">
+result = env['cashflow.projection'].generate_projections(months=6)
+        </field>
+    </record>
+
+    <record id="action_quick_monthly_analysis" model="ir.actions.server">
+        <field name="name">📈 This Month's Analysis</field>
+        <field name="model_id" ref="model_expense_analytics"/>
+        <field name="state">code</field>
+        <field name="code">
+result = env['expense.analytics'].create_monthly_analysis()
+action = {
+    'type': 'ir.actions.act_window',
+    'res_model': 'expense.analytics',
+    'res_id': result.id,
+    'view_mode': 'form',
+    'target': 'current',
+}
+        </field>
+    </record>
+
+    <!-- Dashboard Menu Structure -->
+    <menuitem id="menu_dashboard" 
+              name="📊 Dashboard" 
+              parent="menu_expense_forecaster_root" 
+              action="action_expense_forecaster_dashboard" 
+              sequence="5"/>
+
+    <menuitem id="menu_quick_actions" 
+              name="Quick Actions" 
+              parent="menu_expense_forecaster_root" 
+              sequence="40"/>
+    
+    <menuitem id="menu_quick_forecasts" 
+              name="Generate Forecasts" 
+              parent="menu_quick_actions" 
+              action="action_quick_generate_forecasts" 
+              sequence="10"/>
+    
+    <menuitem id="menu_quick_projections" 
+              name="Generate Projections" 
+              parent="menu_quick_actions" 
+              action="action_quick_generate_projections" 
+              sequence="20"/>
+    
+    <menuitem id="menu_quick_analysis" 
+              name="Monthly Analysis" 
+              parent="menu_quick_actions" 
+              action="action_quick_monthly_analysis" 
+              sequence="30"/>
+</odoo>
