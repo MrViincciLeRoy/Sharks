@@ -9,16 +9,25 @@ RUN apt-get update && \
 
 RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
 
-# Install Python dependencies (ERPNext connector only needs requests)
+# Install Python dependencies
 RUN pip3 install --no-cache-dir requests
 
 RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
     chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
 
+# FIXED: Copy the Forecaster module correctly
 COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
+COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
+COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
 
-COPY /install-forecaster.sh /install-forecaster.sh
+COPY install-forecaster.sh /install-forecaster.sh
 RUN chmod +x /install-forecaster.sh
+
+# Verify modules are copied
+RUN echo "=== Verifying addon structure ===" && \
+    ls -la /mnt/extra-addons/ && \
+    echo "=== Forecaster ===" && ls -la /mnt/extra-addons/Forecaster/
 
 USER odoo
 CMD ["/install-forecaster.sh"]
