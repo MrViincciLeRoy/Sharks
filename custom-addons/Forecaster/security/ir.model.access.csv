@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_expense_forecast_user,expense.forecast.user,model_expense_forecast,base.group_user,1,1,1,0
+access_expense_forecast_manager,expense.forecast.manager,model_expense_forecast,account.group_account_manager,1,1,1,1
+access_expense_forecaster_user,expense.forecaster.user,model_expense_forecaster,base.group_user,1,0,0,0
+access_expense_forecaster_manager,expense.forecaster.manager,model_expense_forecaster,account.group_account_manager,1,1,1,1
+access_expense_analytics_user,expense.analytics.user,model_expense_analytics,base.group_user,1,1,1,0
+access_expense_analytics_manager,expense.analytics.manager,model_expense_analytics,account.group_account_manager,1,1,1,1
+access_cashflow_projection_user,cashflow.projection.user,model_cashflow_projection,base.group_user,1,1,1,0
+access_cashflow_projection_manager,cashflow.projection.manager,model_cashflow_projection,account.group_account_manager,1,1,1,1
+access_transaction_insight_wizard_user,transaction.insight.wizard.user,model_transaction_insight_wizard,base.group_user,1,1,1,1
