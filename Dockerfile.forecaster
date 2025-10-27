@@ -15,10 +15,10 @@ RUN pip3 install --no-cache-dir requests
 RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
     chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
 
-COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
 
-COPY install-erpnext.sh /install-erpnext.sh
-RUN chmod +x /install-erpnext.sh
+COPY /install-forecaster.sh /install-forecaster.sh
+RUN chmod +x /install-forecaster.sh
 
 USER odoo
-CMD ["/Install-forecaster.sh"]
+CMD ["/install-forecaster.sh"]
