@@ -1,0 +1,24 @@
+FROM odoo:17.0
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
+
+# Install Python dependencies (ERPNext connector only needs requests)
+RUN pip3 install --no-cache-dir requests
+
+RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
+    chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
+
+COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+
+COPY install-erpnext.sh /install-erpnext.sh
+RUN chmod +x /install-erpnext.sh
+
+USER odoo
+CMD ["/Install-forecaster.sh"]
