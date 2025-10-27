@@ -163,7 +163,7 @@ class EmailStatement(models.Model):
                 raise UserError(f'Failed to download PDF: {str(e)}')
     
     def _parse_pdf_transactions(self, pdf_data):
-        """Parse PDF and extract transaction data"""
+        """Parse PDF and extract transaction data - FIXED VERSION"""
         parsing_log = []
         parsing_log.append("=== PDF PARSING DEBUG LOG ===\n")
         
@@ -248,40 +248,85 @@ class EmailStatement(models.Model):
             
             parsing_log.append(f"\n=== FOUND {len(transactions)} TRANSACTIONS ===\n")
             
-            # Create transaction records
+            # FIXED: Better transaction creation with error handling
             created_count = 0
+            failed_count = 0
+            
             for trans in transactions:
                 try:
-                    parsing_log.append(f"\nCreating transaction: {trans}\n")
-                    self.env['bank.transaction'].create({
+                    parsing_log.append(f"\n--- Creating transaction {created_count + 1} ---\n")
+                    parsing_log.append(f"Date: {trans.get('date')}\n")
+                    parsing_log.append(f"Description: {trans.get('description')}\n")
+                    parsing_log.append(f"Amount: {trans.get('amount')}\n")
+                    parsing_log.append(f"Type: {trans.get('type')}\n")
+                    
+                    # Validate required fields
+                    if not trans.get('date'):
+                        parsing_log.append("ERROR: Missing date, skipping\n")
+                        failed_count += 1
+                        continue
+                    
+                    if not trans.get('description'):
+                        parsing_log.append("ERROR: Missing description, skipping\n")
+                        failed_count += 1
+                        continue
+                    
+                    if trans.get('amount') is None:
+                        parsing_log.append("ERROR: Missing amount, skipping\n")
+                        failed_count += 1
+                        continue
+                    
+                    # Create transaction
+                    new_trans = self.env['bank.transaction'].create({
                         'statement_id': self.id,
                         'date': trans.get('date'),
-                        'description': trans.get('description'),
-                        'amount': trans.get('amount'),
-                        'transaction_type': trans.get('type'),
-                        'reference': trans.get('reference'),
+                        'description': trans.get('description')[:500],  # Limit length
+                        'amount': abs(float(trans.get('amount'))),
+                        'transaction_type': trans.get('type', 'debit'),
+                        'reference': trans.get('reference', '')[:100],  # Limit length
                     })
+                    
+                    parsing_log.append(f"✓ Created transaction ID: {new_trans.id}\n")
                     created_count += 1
+                    
                 except Exception as e:
-                    parsing_log.append(f"ERROR creating transaction: {str(e)}\n")
-                    _logger.error(f"Failed to create transaction: {str(e)}")
+                    parsing_log.append(f"✗ ERROR creating transaction: {str(e)}\n")
+                    parsing_log.append(f"   Transaction data: {trans}\n")
+                    _logger.error(f"Failed to create transaction: {str(e)}", exc_info=True)
+                    failed_count += 1
             
-            parsing_log.append(f"\n=== SUCCESSFULLY CREATED {created_count} TRANSACTIONS ===\n")
+            parsing_log.append(f"\n=== SUMMARY ===\n")
+            parsing_log.append(f"Successfully created: {created_count} transactions\n")
+            parsing_log.append(f"Failed: {failed_count} transactions\n")
+            parsing_log.append(f"Total processed: {len(transactions)} transactions\n")
             
             # Save the parsing log
             self.parsing_log = ''.join(parsing_log)
             
-            _logger.info(f"Created {created_count} transaction records")
+            # IMPORTANT: Commit the changes
+            self.env.cr.commit()
+            
+            _logger.info(f"Created {created_count} transaction records, {failed_count} failed")
+            
+            if created_count == 0 and len(transactions) > 0:
+                raise UserError(
+                    f'Failed to create any transactions. Found {len(transactions)} in PDF but all failed. '
+                    'Check the Parsing Log for details.'
+                )
             
         except UserError:
             # Save log even on user errors
             self.parsing_log = ''.join(parsing_log)
+            self.env.cr.commit()
             raise
         except Exception as e:
             parsing_log.append(f"\n=== FATAL ERROR ===\n{str(e)}\n")
+            import traceback
+            parsing_log.append(f"\n{traceback.format_exc()}\n")
             self.parsing_log = ''.join(parsing_log)
-            _logger.error(f"Error parsing PDF: {str(e)}")
-            raise UserError(f'Failed to parse PDF: {str(e)}')
+            self.env.cr.commit()
+            _logger.error(f"Error parsing PDF: {str(e)}", exc_info=True)
+            raise UserError(f'Failed to parse PDF: {str(e)}. Check the Parsing Log for details.')
     
     def _parse_tymebank_pdf(self, text, log):
         """Parse TymeBank PDF statement"""
@@ -320,7 +365,7 @@ class EmailStatement(models.Model):
                         })
                         log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
                     except Exception as e:
-                        log.append(f"✗ Error parsing match: {str(e)}\n")
+                        log.append(f"✗ Error parsing match: {str(e)} | Match: {match}\n")
                         continue
                 
                 if transactions:
@@ -366,7 +411,7 @@ class EmailStatement(models.Model):
                         })
                         log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
                     except Exception as e:
-                        log.append(f"✗ Error parsing match: {str(e)}\n")
+                        log.append(f"✗ Error parsing match: {str(e)} | Match: {match}\n")
                         continue
                 
                 if transactions:
@@ -410,7 +455,7 @@ class EmailStatement(models.Model):
                         })
                         log.append(f"✓ Parsed: {trans_date} | {description[:30]} | {amount}\n")
                     except Exception as e:
-                        log.append(f"✗ Error: {str(e)}\n")
+                        log.append(f"✗ Error: {str(e)} | Match: {match}\n")
                         continue
                 
                 if transactions:
@@ -579,4 +624,4 @@ class EmailStatement(models.Model):
                 'type': 'success',
                 'sticky': False,
             }
-    }
+        }
