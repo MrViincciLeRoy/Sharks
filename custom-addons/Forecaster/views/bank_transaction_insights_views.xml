@@ -67,8 +67,8 @@
         <field name="model">bank.transaction</field>
         <field name="inherit_id" ref="gmail_erpnext_bridge.view_bank_transaction_search_extended"/>
         <field name="arch" type="xml">
-            <!-- Add filters after the 'synced' filter -->
-            <xpath expr="//filter[@name='synced']" position="after">
+            <!-- Add filters after existing filters -->
+            <xpath expr="//filter[@name='ready_to_sync']" position="after">
                 <separator/>
                 <filter string="Recurring" 
                         name="recurring" 
@@ -88,8 +88,8 @@
                         domain="[('risk_level', '=', 'low')]"/>
             </xpath>
             
-            <!-- Add group-by options after the 'group_sync' filter -->
-            <xpath expr="//filter[@name='group_sync']" position="after">
+            <!-- Add group-by options -->
+            <xpath expr="//filter[@name='group_date']" position="after">
                 <filter string="Spending Pattern" 
                         name="group_pattern" 
                         context="{'group_by': 'spending_pattern'}"/>
