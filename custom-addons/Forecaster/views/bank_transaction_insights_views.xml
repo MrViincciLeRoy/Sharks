@@ -41,8 +41,8 @@
                 <field name="similar_transaction_count" invisible="1"/>
             </xpath>
 
-            <!-- Add insights group after ERPNext Sync group -->
-            <xpath expr="//group[@string='ERPNext Sync']" position="after">
+            <!-- Add insights fields at the end of the sheet, before closing tag -->
+            <xpath expr="//sheet" position="inside">
                 <group string="Transaction Insights" invisible="not is_recurring and not is_unusual">
                     <group>
                         <field name="is_recurring" widget="boolean_toggle"/>
