@@ -2,32 +2,60 @@ FROM odoo:17.0
 
 USER root
 
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends postgresql-client && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
+# Upgrade pip first
+RUN pip3 install --upgrade pip setuptools wheel
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir requests
+# Install security updates
+RUN pip3 install --no-cache-dir cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
 
+# Install Google API libraries (required by GMailer)
+RUN pip3 install --no-cache-dir \
+    google-auth==2.23.0 \
+    google-auth-oauthlib==1.1.0 \
+    google-auth-httplib2==0.1.1 \
+    google-api-python-client==2.100.0
+
+# Install other dependencies
+RUN pip3 install --no-cache-dir \
+    beautifulsoup4==4.12.2 \
+    requests==2.31.0 \
+    PyPDF2==3.0.1 \
+    pdfplumber==0.10.3
+
+# Verify installations
+RUN python3 -c "import google.auth; print('✓ google-auth installed')" && \
+    python3 -c "import google_auth_oauthlib; print('✓ google-auth-oauthlib installed')" && \
+    python3 -c "import googleapiclient; print('✓ google-api-python-client installed')" && \
+    python3 -c "import PyPDF2; print('✓ PyPDF2 installed')" && \
+    python3 -c "import pdfplumber; print('✓ pdfplumber installed')"
+
+# Create directories
 RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
     chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
 
-# FIXED: Copy the Forecaster module correctly
-COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
+# Copy ALL required modules (Forecaster depends on all of these)
 COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
 COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
 COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
+COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
 
+# Copy install script
 COPY install-forecaster.sh /install-forecaster.sh
 RUN chmod +x /install-forecaster.sh
 
-# Verify modules are copied
+# Verify all modules are present
 RUN echo "=== Verifying addon structure ===" && \
     ls -la /mnt/extra-addons/ && \
-    echo "=== Forecaster ===" && ls -la /mnt/extra-addons/Forecaster/
+    echo "=== GMailer ===" && test -f /mnt/extra-addons/GMailer/__manifest__.py && echo "✓ Found" && \
+    echo "=== ERPNext Connector ===" && test -f /mnt/extra-addons/erpnext_connector/__manifest__.py && echo "✓ Found" && \
+    echo "=== Bridge ===" && test -f /mnt/extra-addons/gmail_erpnext_bridge/__manifest__.py && echo "✓ Found" && \
+    echo "=== Forecaster ===" && test -f /mnt/extra-addons/Forecaster/__manifest__.py && echo "✓ Found"
 
 USER odoo
 CMD ["/install-forecaster.sh"]
