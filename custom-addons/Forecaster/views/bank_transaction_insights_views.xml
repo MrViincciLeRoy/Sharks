@@ -29,7 +29,7 @@
         <field name="model">bank.transaction</field>
         <field name="inherit_id" ref="gmail_erpnext_bridge.view_bank_transaction_form_extended"/>
         <field name="arch" type="xml">
-            <xpath expr="//header//button[@name='action_sync_to_erpnext']" position="after">
+            <xpath expr="//button[@name='action_sync_to_erpnext']" position="after">
                 <button name="action_view_similar_transactions" 
                         string="View Similar" 
                         type="object" 
@@ -41,7 +41,7 @@
                 <field name="similar_transaction_count" invisible="1"/>
             </xpath>
 
-            <xpath expr="//group[last()]" position="after">
+            <xpath expr="//group[@string='ERPNext Sync']" position="after">
                 <group string="Transaction Insights" invisible="not is_recurring and not is_unusual">
                     <group>
                         <field name="is_recurring" widget="boolean_toggle"/>
@@ -84,7 +84,7 @@
                         domain="[('risk_level', '=', 'low')]"/>
             </xpath>
             
-            <xpath expr="//group[@string='Group By']" position="inside">
+            <xpath expr="//filter[@name='group_date']" position="after">
                 <filter string="Spending Pattern" 
                         name="group_pattern" 
                         context="{'group_by': 'spending_pattern'}"/>
