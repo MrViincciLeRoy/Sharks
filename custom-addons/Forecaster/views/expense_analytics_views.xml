@@ -26,24 +26,17 @@
                         </group>
                     </group>
 
-                    <!-- Summary Cards -->
+                    <!-- Summary Cards - FIXED: Removed label tags, using direct field display -->
                     <div class="row mt16 o_settings_container">
                         <div class="col-12 col-lg-6 o_setting_box">
                             <div class="o_setting_left_pane"/>
                             <div class="o_setting_right_pane">
                                 <div class="content-group">
-                                    <div class="row">
-                                        <label class="col-lg-3 o_light_label" string="Total Expenses"/>
-                                        <field name="total_expenses" widget="monetary" class="text-danger fw-bold"/>
-                                    </div>
-                                    <div class="row">
-                                        <label class="col-lg-3 o_light_label" string="Total Income"/>
-                                        <field name="total_income" widget="monetary" class="text-success fw-bold"/>
-                                    </div>
-                                    <div class="row">
-                                        <label class="col-lg-3 o_light_label" string="Net Cashflow"/>
-                                        <field name="net_cashflow" widget="monetary" class="fw-bold"/>
-                                    </div>
+                                    <group>
+                                        <field name="total_expenses" widget="monetary" string="Total Expenses" class="text-danger fw-bold"/>
+                                        <field name="total_income" widget="monetary" string="Total Income" class="text-success fw-bold"/>
+                                        <field name="net_cashflow" widget="monetary" string="Net Cashflow" class="fw-bold"/>
+                                    </group>
                                 </div>
                             </div>
                         </div>
@@ -52,14 +45,10 @@
                             <div class="o_setting_left_pane"/>
                             <div class="o_setting_right_pane">
                                 <div class="content-group">
-                                    <div class="row">
-                                        <label class="col-lg-3 o_light_label" string="Avg Daily Expense"/>
-                                        <field name="avg_daily_expense" widget="monetary"/>
-                                    </div>
-                                    <div class="row">
-                                        <label class="col-lg-3 o_light_label" string="Avg Transaction"/>
-                                        <field name="avg_transaction_size" widget="monetary"/>
-                                    </div>
+                                    <group>
+                                        <field name="avg_daily_expense" widget="monetary" string="Avg Daily Expense"/>
+                                        <field name="avg_transaction_size" widget="monetary" string="Avg Transaction"/>
+                                    </group>
                                 </div>
                             </div>
                         </div>
