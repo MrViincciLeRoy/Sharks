@@ -1,41 +1,44 @@
-FROM odoo:17.0
+name: Install Forecaster 2
 
-USER root
+on:
+  workflow_dispatch:
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends postgresql-client && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+jobs:
+  install-bridge:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-# Install ALL Python dependencies needed by GMailer, ERPNext, and Forecaster
-RUN pip3 install --no-cache-dir \
-    google-auth \
-    google-auth-oauthlib \
-    google-auth-httplib2 \
-    google-api-python-client \
-    beautifulsoup4 \
-    requests \
-    PyPDF2 \
-    pdfplumber
+      - name: Build Docker image
+        run: |
+          echo "🏗️  Building Docker image with Forecaster module..."
+          docker build -f Dockerfile.forecaster -t odoo-forecaster .
 
-RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
-    chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
+      - name: Install Bridge Module
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "🌉 Installing forecaster module..."
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-forecaster
 
-# FIXED: Copy the Forecaster module correctly
-COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
-COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
-COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
-COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
-
-COPY install-forecaster.sh /install-forecaster.sh
-RUN chmod +x /install-forecaster.sh
-
-# Verify modules are copied
-RUN echo "=== Verifying addon structure ===" && \
-    ls -la /mnt/extra-addons/ && \
-    echo "=== Forecaster ===" && ls -la /mnt/extra-addons/Forecaster/
-
-USER odoo
-CMD ["/install-forecaster.sh"]
+      - name: Installation Complete
+        run: |
+          echo "✅ Forecaster module installed successfully!"
+           
