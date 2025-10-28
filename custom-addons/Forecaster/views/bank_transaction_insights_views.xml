@@ -41,19 +41,22 @@
                 <field name="similar_transaction_count" invisible="1"/>
             </xpath>
 
-            <xpath expr="//group[@string='ERPNext Sync']" position="after">
-                <group string="Transaction Insights" invisible="not is_recurring and not is_unusual">
+            <!-- Add insights as a new notebook page -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Transaction Insights" invisible="not is_recurring and not is_unusual">
                     <group>
-                        <field name="is_recurring" widget="boolean_toggle"/>
-                        <field name="spending_pattern"/>
-                        <field name="similar_transaction_count"/>
+                        <group>
+                            <field name="is_recurring" widget="boolean_toggle"/>
+                            <field name="spending_pattern"/>
+                            <field name="similar_transaction_count"/>
+                        </group>
+                        <group>
+                            <field name="is_unusual" widget="boolean_toggle"/>
+                            <field name="risk_level" widget="badge"/>
+                            <field name="forecast_variance" widget="monetary" invisible="not forecast_variance"/>
+                        </group>
                     </group>
-                    <group>
-                        <field name="is_unusual" widget="boolean_toggle"/>
-                        <field name="risk_level" widget="badge"/>
-                        <field name="forecast_variance" widget="monetary" invisible="not forecast_variance"/>
-                    </group>
-                </group>
+                </page>
             </xpath>
         </field>
     </record>
@@ -64,7 +67,8 @@
         <field name="model">bank.transaction</field>
         <field name="inherit_id" ref="gmail_erpnext_bridge.view_bank_transaction_search_extended"/>
         <field name="arch" type="xml">
-            <xpath expr="//filter[@name='ready_to_sync']" position="after">
+            <!-- Add filters after the 'synced' filter -->
+            <xpath expr="//filter[@name='synced']" position="after">
                 <separator/>
                 <filter string="Recurring" 
                         name="recurring" 
@@ -84,7 +88,8 @@
                         domain="[('risk_level', '=', 'low')]"/>
             </xpath>
             
-            <xpath expr="//filter[@name='group_date']" position="after">
+            <!-- Add group-by options after the 'group_sync' filter -->
+            <xpath expr="//filter[@name='group_sync']" position="after">
                 <filter string="Spending Pattern" 
                         name="group_pattern" 
                         context="{'group_by': 'spending_pattern'}"/>
