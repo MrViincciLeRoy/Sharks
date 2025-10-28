@@ -41,22 +41,19 @@
                 <field name="similar_transaction_count" invisible="1"/>
             </xpath>
 
-            <!-- Add insights as a new notebook page -->
-            <xpath expr="//notebook" position="inside">
-                <page string="Transaction Insights" invisible="not is_recurring and not is_unusual">
+            <!-- Add insights group after ERPNext Sync group -->
+            <xpath expr="//group[@string='ERPNext Sync']" position="after">
+                <group string="Transaction Insights" invisible="not is_recurring and not is_unusual">
                     <group>
-                        <group>
-                            <field name="is_recurring" widget="boolean_toggle"/>
-                            <field name="spending_pattern"/>
-                            <field name="similar_transaction_count"/>
-                        </group>
-                        <group>
-                            <field name="is_unusual" widget="boolean_toggle"/>
-                            <field name="risk_level" widget="badge"/>
-                            <field name="forecast_variance" widget="monetary" invisible="not forecast_variance"/>
-                        </group>
+                        <field name="is_recurring" widget="boolean_toggle"/>
+                        <field name="spending_pattern"/>
                     </group>
-                </page>
+                    <group>
+                        <field name="is_unusual" widget="boolean_toggle"/>
+                        <field name="risk_level" widget="badge"/>
+                        <field name="forecast_variance" widget="monetary" invisible="not forecast_variance"/>
+                    </group>
+                </group>
             </xpath>
         </field>
     </record>
