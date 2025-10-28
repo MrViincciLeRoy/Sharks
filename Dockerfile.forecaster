@@ -16,21 +16,21 @@ RUN pip3 uninstall -y pdfminer.six || true && \
 RUN pip3 install --upgrade pip setuptools wheel
 
 # Install security updates
-RUN pip3 install --no-cache-dir cryptography==42.0.4 pyopenssl==24.1.0
+RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
 
-# Install Google API libraries (required by GMailer)
+# FIXED: Install Google API libraries (required by GMailer)
 RUN pip3 install --no-cache-dir \
-    google-auth==2.23.0 \
-    google-auth-oauthlib==1.1.0 \
-    google-auth-httplib2==0.1.1 \
-    google-api-python-client==2.100.0
-
-# Install other dependencies (use compatible versions)
-RUN pip3 install --no-cache-dir \
+    google-auth \
+    google-auth-oauthlib \
+    google-auth-httplib2 \
+    google-api-python-client \
     beautifulsoup4 \
     requests \
     PyPDF2 \
     pdfplumber
+
+
+
 
 # Verify installations
 RUN python3 -c "import google.auth; print('✓ google-auth installed')" && \
