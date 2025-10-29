@@ -1,0 +1,53 @@
+name: Install CuStateGen
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-custategen:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          echo "🏗️  Building Docker image with CuStateGen module..."
+          docker build -f Dockerfile.custategen -t odoo-custategen .
+
+      - name: Install CuStateGen Module
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGSSLMODE: require
+        run: |
+          echo "📊 Installing CuStateGen module..."
+          docker run --rm \
+            -e PGHOST="${PGHOST}" \
+            -e PGPORT="${PGPORT}" \
+            -e PGUSER="${PGUSER}" \
+            -e PGPASSWORD="${PGPASSWORD}" \
+            -e PGDATABASE="${PGDATABASE}" \
+            -e PGSSLMODE="${PGSSLMODE}" \
+            odoo-custategen
+
+      - name: Installation Complete
+        run: |
+          echo "✅ CuStateGen module installed successfully!"
+          echo ""
+          echo "📋 Features Available:"
+          echo "  • Customer Account Management (synced from ERPNext)"
+          echo "  • Professional Customer Statements"
+          echo "  • Material Purchase Analysis"
+          echo "  • Supplier Performance Analytics"
+          echo "  • AI Payment Predictions"
+          echo "  • Customizable Statement Templates"
+          echo ""
+          echo "🔗 Access via: CuStateGen menu in Odoo"
