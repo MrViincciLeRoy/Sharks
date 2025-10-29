@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Bulk Sync Wizard Form View -->
+    <record id="view_bulk_sync_wizard_form" model="ir.ui.view">
+        <field name="name">bulk.sync.wizard.form</field>
+        <field name="model">bulk.sync.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Bulk Operations">
+                <sheet>
+                    <group>
+                        <field name="sync_type" widget="radio"/>
+                    </group>
+                    
+                    <separator string="Customer Sync Options" invisible="sync_type != 'customers'"/>
+                    <group invisible="sync_type != 'customers'">
+                        <field name="sync_all_customers"/>
+                        <field name="customer_group_filter" 
+                               placeholder="e.g., Commercial, Retail"
+                               invisible="not sync_all_customers"/>
+                    </group>
+                    
+                    <separator string="Statement Options" invisible="sync_type != 'statements'"/>
+                    <group invisible="sync_type != 'statements'">
+                        <field name="date_from" required="sync_type == 'statements'"/>
+                        <field name="date_to" required="sync_type == 'statements'"/>
+                    </group>
+                    
+                    <separator string="Material Analysis Options" invisible="sync_type != 'materials'"/>
+                    <group invisible="sync_type != 'materials'">
+                        <field name="analysis_period_months"/>
+                    </group>
+                    
+                    <div class="alert alert-warning" role="alert" invisible="sync_type != 'customers'">
+                        <strong>⚠️ Warning:</strong> This will sync all customers from ERPNext. 
+                        Existing customer data will be updated.
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert" invisible="sync_type != 'statements'">
+                        <strong>ℹ️ Info:</strong> This will generate statements for ALL active customers. 
+                        This may take several minutes for large customer bases.
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert" invisible="sync_type != 'materials'">
+                        <strong>ℹ️ Info:</strong> Material analysis will fetch all purchase invoices 
+                        from ERPNext for the specified period.
+                    </div>
+                    
+                    <separator string="Progress" invisible="not progress_log"/>
+                    <field name="progress_log" invisible="not progress_log" readonly="1"/>
+                </sheet>
+                
+                <footer>
+                    <button name="action_start_sync" 
+                            string="Start" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_bulk_sync_wizard" model="ir.actions.act_window">
+        <field name="name">Bulk Operations</field>
+        <field name="res_model">bulk.sync.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

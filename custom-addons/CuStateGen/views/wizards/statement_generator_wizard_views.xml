@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Statement Generator Wizard Form View -->
+    <record id="view_statement_generator_wizard_form" model="ir.ui.view">
+        <field name="name">statement.generator.wizard.form</field>
+        <field name="model">statement.generator.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Customer Statements">
+                <sheet>
+                    <group>
+                        <group string="Select Customers">
+                            <field name="customer_id" 
+                                   invisible="generate_for_all or customer_ids"
+                                   options="{'no_create': True}"/>
+                            <field name="customer_ids" widget="many2many_tags" 
+                                   invisible="generate_for_all or customer_id"
+                                   options="{'no_create': True}"/>
+                            <field name="generate_for_all"/>
+                        </group>
+                        
+                        <group string="Date Range">
+                            <field name="period_type"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Options">
+                            <field name="template_id" options="{'no_create': True}"/>
+                            <field name="include_opening_balance"/>
+                            <field name="include_aging"/>
+                        </group>
+                        
+                        <group string="Actions">
+                            <field name="auto_send_email"/>
+                            <field name="auto_download_pdf"/>
+                        </group>
+                    </group>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <strong>ℹ️ Info:</strong> 
+                        <ul>
+                            <li>Statements will be fetched from ERPNext automatically</li>
+                            <li>If a statement already exists for the period, it will be refreshed</li>
+                            <li>Email sending requires customer email addresses</li>
+                        </ul>
+                    </div>
+                </sheet>
+                
+                <footer>
+                    <button name="action_generate_statements" 
+                            string="Generate Statements" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <button name="action_preview_statement" 
+                            string="Preview" 
+                            type="object"
+                            invisible="generate_for_all or customer_ids"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_statement_generator_wizard" model="ir.actions.act_window">
+        <field name="name">Generate Statements</field>
+        <field name="res_model">statement.generator.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_generate_statements" 
+              name="Generate Statements" 
+              parent="menu_custategen_root" 
+              action="action_statement_generator_wizard" 
+              sequence="15"/>
+</odoo>
