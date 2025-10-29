@@ -1,0 +1,50 @@
+FROM odoo:17.0
+
+USER root
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends postgresql-client && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install security updates
+RUN pip install cryptography==42.0.4 pyopenssl==24.1.0 urllib3==2.2.1
+
+# Install Python dependencies for all required modules
+RUN pip3 install --no-cache-dir \
+    google-auth \
+    google-auth-oauthlib \
+    google-auth-httplib2 \
+    google-api-python-client \
+    beautifulsoup4 \
+    requests \
+    PyPDF2 \
+    pdfplumber
+
+# Create directories
+RUN mkdir -p /mnt/extra-addons /var/lib/odoo && \
+    chown -R odoo:odoo /mnt/extra-addons /var/lib/odoo
+
+# Copy ALL required modules (CuStateGen depends on all of these)
+COPY --chown=odoo:odoo ./custom-addons/GMailer /mnt/extra-addons/GMailer
+COPY --chown=odoo:odoo ./custom-addons/erpnext_connector /mnt/extra-addons/erpnext_connector
+COPY --chown=odoo:odoo ./custom-addons/gmail_erpnext_bridge /mnt/extra-addons/gmail_erpnext_bridge
+COPY --chown=odoo:odoo ./custom-addons/Forecaster /mnt/extra-addons/Forecaster
+COPY --chown=odoo:odoo ./custom-addons/CuStateGen /mnt/extra-addons/CuStateGen
+
+# Copy install script
+COPY install-custategen.sh /install-custategen.sh
+RUN chmod +x /install-custategen.sh
+
+# Verify all modules are present
+RUN echo "=== Verifying addon structure ===" && \
+    ls -la /mnt/extra-addons/ && \
+    echo "=== GMailer ===" && test -f /mnt/extra-addons/GMailer/__manifest__.py && echo "✓ Found" && \
+    echo "=== ERPNext Connector ===" && test -f /mnt/extra-addons/erpnext_connector/__manifest__.py && echo "✓ Found" && \
+    echo "=== Bridge ===" && test -f /mnt/extra-addons/gmail_erpnext_bridge/__manifest__.py && echo "✓ Found" && \
+    echo "=== Forecaster ===" && test -f /mnt/extra-addons/Forecaster/__manifest__.py && echo "✓ Found" && \
+    echo "=== CuStateGen ===" && test -f /mnt/extra-addons/CuStateGen/__manifest__.py && echo "✓ Found"
+
+USER odoo
+CMD ["/install-custategen.sh"]
