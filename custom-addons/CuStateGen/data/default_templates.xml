@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Default Statement Template -->
+        <record id="statement_template_default" model="statement.template">
+            <field name="name">Default Template</field>
+            <field name="is_default" eval="True"/>
+            <field name="company_name" eval="obj().env.company.name"/>
+            <field name="show_logo" eval="True"/>
+            <field name="show_aging" eval="True"/>
+            <field name="show_payment_terms" eval="True"/>
+            <field name="show_bank_details" eval="True"/>
+            <field name="header_color">#1f77b4</field>
+            <field name="accent_color">#ff7f0e</field>
+            <field name="footer_message">Thank you for your business. Please remit payment by the due date to avoid any late fees.</field>
+            <field name="terms_and_conditions">Payment is due within 30 days from the invoice date. Interest may be charged on overdue accounts at a rate of 2% per month. All disputes must be raised within 7 days of receipt of this statement.</field>
+        </record>
+
+        <!-- Professional Blue Template -->
+        <record id="statement_template_professional" model="statement.template">
+            <field name="name">Professional Blue</field>
+            <field name="is_default" eval="False"/>
+            <field name="company_name" eval="obj().env.company.name"/>
+            <field name="show_logo" eval="True"/>
+            <field name="show_aging" eval="True"/>
+            <field name="show_payment_terms" eval="True"/>
+            <field name="show_bank_details" eval="True"/>
+            <field name="header_color">#003366</field>
+            <field name="accent_color">#0066cc</field>
+            <field name="footer_message">We value your partnership. For any queries regarding this statement, please contact our accounts department.</field>
+        </record>
+
+        <!-- Modern Green Template -->
+        <record id="statement_template_modern" model="statement.template">
+            <field name="name">Modern Green</field>
+            <field name="is_default" eval="False"/>
+            <field name="company_name" eval="obj().env.company.name"/>
+            <field name="show_logo" eval="True"/>
+            <field name="show_aging" eval="True"/>
+            <field name="show_payment_terms" eval="False"/>
+            <field name="show_bank_details" eval="True"/>
+            <field name="header_color">#2c7a3f</field>
+            <field name="accent_color">#4caf50</field>
+            <field name="footer_message">Thank you for choosing us as your trusted partner.</field>
+        </record>
+
+        <!-- Sequence for Statement Numbers -->
+        <record id="seq_customer_statement" model="ir.sequence">
+            <field name="name">Customer Statement</field>
+            <field name="code">customer.statement</field>
+            <field name="prefix">STMT/</field>
+            <field name="padding">5</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>
