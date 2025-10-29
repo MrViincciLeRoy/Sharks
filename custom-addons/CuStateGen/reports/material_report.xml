@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Material Analysis Report Action -->
+    <record id="action_report_material_analysis" model="ir.actions.report">
+        <field name="name">Material Analysis Report</field>
+        <field name="model">material.analysis</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">CuStateGen.report_material_analysis_document</field>
+        <field name="report_file">CuStateGen.report_material_analysis_document</field>
+        <field name="binding_model_id" ref="model_material_analysis"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Material Analysis Report Template -->
+    <template id="report_material_analysis_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <!-- Header -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2 style="color: #1f77b4;">MATERIAL PURCHASE ANALYSIS</h2>
+                                <h4><span t-field="doc.name"/></h4>
+                                <p>
+                                    Period: <span t-field="doc.date_from"/> to <span t-field="doc.date_to"/><br/>
+                                    Analysis Date: <span t-field="doc.analysis_date"/>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Executive Summary -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h4 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    EXECUTIVE SUMMARY
+                                </h4>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-3 text-center">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h1 style="color: #1f77b4;"><span t-field="doc.total_materials"/></h1>
+                                        <p class="text-muted">Total Materials</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3 text-center">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h1 style="color: #ff7f0e;">
+                                            <span t-field="doc.total_purchase_value" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </h1>
+                                        <p class="text-muted">Total Value</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3 text-center">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h1 style="color: #2ca02c;"><span t-field="doc.repeated_materials"/></h1>
+                                        <p class="text-muted">Repeated Purchases</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3 text-center">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h1 style="color: #d62728;"><span t-field="doc.unique_suppliers"/></h1>
+                                        <p class="text-muted">Unique Suppliers</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Performers -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <div class="alert alert-success">
+                                    <strong>🏆 Top Material:</strong><br/>
+                                    <span t-field="doc.top_material"/><br/>
+                                    Value: <span t-field="doc.top_material_value" 
+                                                 t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="alert alert-info">
+                                    <strong>🏢 Top Supplier:</strong><br/>
+                                    <span t-field="doc.top_supplier"/><br/>
+                                    Value: <span t-field="doc.top_supplier_value" 
+                                                 t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Material Details -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h4 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    MATERIAL DETAILS
+                                </h4>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm table-bordered mt-3">
+                            <thead style="background-color: #1f77b4; color: white;">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Material Name</th>
+                                    <th class="text-center">Purchases</th>
+                                    <th class="text-end">Total Value</th>
+                                    <th class="text-end">Avg Price</th>
+                                    <th>Primary Supplier</th>
+                                    <th class="text-center">Frequency</th>
+                                    <th class="text-center">Price Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="doc.material_line_ids.sorted('total_value', reverse=True)" t-as="line">
+                                    <tr>
+                                        <td><span t-field="line.material_code"/></td>
+                                        <td>
+                                            <strong t-field="line.material_name"/>
+                                            <t t-if="line.is_repeated">
+                                                <span class="badge text-bg-warning ms-1">Repeated</span>
+                                            </t>
+                                        </td>
+                                        <td class="text-center"><span t-field="line.purchase_count"/></td>
+                                        <td class="text-end">
+                                            <span t-field="line.total_value" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="line.avg_unit_price" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                        <td><span t-field="line.primary_supplier"/></td>
+                                        <td class="text-center">
+                                            <span t-if="line.purchase_frequency == 'frequent'" class="badge text-bg-danger">
+                                                Frequent
+                                            </span>
+                                            <span t-if="line.purchase_frequency == 'regular'" class="badge text-bg-warning">
+                                                Regular
+                                            </span>
+                                            <span t-if="line.purchase_frequency == 'occasional'" class="badge text-bg-info">
+                                                Occasional
+                                            </span>
+                                            <span t-if="line.purchase_frequency == 'one_time'" class="badge text-bg-secondary">
+                                                One-time
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span t-if="line.price_trend == 'increasing'" class="badge text-bg-danger">
+                                                ↑ Rising
+                                            </span>
+                                            <span t-if="line.price_trend == 'stable'" class="badge text-bg-success">
+                                                → Stable
+                                            </span>
+                                            <span t-if="line.price_trend == 'decreasing'" class="badge text-bg-success">
+                                                ↓ Falling
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- Key Insights -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h4 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    KEY INSIGHTS
+                                </h4>
+                                <ul>
+                                    <li>
+                                        <strong>Purchase Concentration:</strong> 
+                                        Top 5 materials account for 
+                                        <t t-set="top5_value" t-value="sum(doc.material_line_ids.sorted('total_value', reverse=True)[:5].mapped('total_value'))"/>
+                                        <t t-set="concentration_pct" t-value="(top5_value / doc.total_purchase_value * 100) if doc.total_purchase_value else 0"/>
+                                        <strong><t t-esc="'%.1f' % concentration_pct"/>%</strong> of total value
+                                    </li>
+                                    <li>
+                                        <strong>Supplier Diversity:</strong>
+                                        Purchases spread across <strong t-field="doc.unique_suppliers"/> suppliers
+                                    </li>
+                                    <li>
+                                        <strong>Repeat Purchase Rate:</strong>
+                                        <t t-set="repeat_rate" t-value="(doc.repeated_materials / doc.total_materials * 100) if doc.total_materials else 0"/>
+                                        <strong><t t-esc="'%.1f' % repeat_rate"/>%</strong> of materials purchased multiple times
+                                    </li>
+                                    <li t-if="doc.material_line_ids.filtered(lambda l: l.price_trend == 'increasing')">
+                                        <strong class="text-danger">Price Alert:</strong>
+                                        <t t-set="rising_count" t-value="len(doc.material_line_ids.filtered(lambda l: l.price_trend == 'increasing'))"/>
+                                        <strong><t t-esc="rising_count"/></strong> materials showing price increases
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h4 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    RECOMMENDATIONS
+                                </h4>
+                                <div class="alert alert-info">
+                                    <strong>💡 Action Items:</strong>
+                                    <ul class="mb-0">
+                                        <li t-if="doc.repeated_materials > 0">
+                                            Consider negotiating bulk discounts for 
+                                            <strong t-field="doc.repeated_materials"/> frequently purchased materials
+                                        </li>
+                                        <li t-if="doc.material_line_ids.filtered(lambda l: l.price_trend == 'increasing')">
+                                            Review pricing with suppliers for materials showing cost increases
+                                        </li>
+                                        <li t-if="doc.material_line_ids.filtered(lambda l: l.supplier_count == 1 and l.is_repeated)">
+                                            Identify alternative suppliers for single-sourced repeated materials
+                                        </li>
+                                        <li>
+                                            Consolidate purchases with top suppliers for better negotiating power
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="row mt-3" t-if="doc.notes">
+                            <div class="col-12">
+                                <h4 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    NOTES
+                                </h4>
+                                <p t-field="doc.notes"/>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Report Action -->
+    <record id="action_report_customer_statement" model="ir.actions.report">
+        <field name="name">Customer Statement</field>
+        <field name="model">customer.statement</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">CuStateGen.report_customer_statement_document</field>
+        <field name="report_file">CuStateGen.report_customer_statement_document</field>
+        <field name="binding_model_id" ref="model_customer_statement"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Report Template -->
+    <template id="report_customer_statement_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <!-- Header -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <t t-if="doc.template_id.show_logo and doc.template_id.company_logo">
+                                    <img t-att-src="image_data_uri(doc.template_id.company_logo)" 
+                                         style="max-height: 80px;" alt="Company Logo"/>
+                                </t>
+                                <div class="mt-2">
+                                    <strong t-field="doc.template_id.company_name"/>
+                                    <div t-field="doc.template_id.company_address"/>
+                                    <div>
+                                        <span t-if="doc.template_id.company_phone">
+                                            Tel: <span t-field="doc.template_id.company_phone"/>
+                                        </span>
+                                    </div>
+                                    <div t-if="doc.template_id.company_email">
+                                        Email: <span t-field="doc.template_id.company_email"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <h2 style="color: #1f77b4;">CUSTOMER STATEMENT</h2>
+                                <div class="mt-2">
+                                    <strong>Statement #:</strong> <span t-field="doc.statement_number"/><br/>
+                                    <strong>Date:</strong> <span t-field="doc.date_to"/><br/>
+                                    <strong>Period:</strong> 
+                                    <span t-field="doc.date_from"/> to <span t-field="doc.date_to"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Details -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <h5 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    CUSTOMER DETAILS
+                                </h5>
+                                <div>
+                                    <strong t-field="doc.customer_id.customer_name"/><br/>
+                                    <span t-field="doc.customer_id.billing_address"/><br/>
+                                    <t t-if="doc.customer_id.email">
+                                        Email: <span t-field="doc.customer_id.email"/><br/>
+                                    </t>
+                                    <t t-if="doc.customer_id.phone">
+                                        Phone: <span t-field="doc.customer_id.phone"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h5 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    ACCOUNT SUMMARY
+                                </h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Opening Balance:</td>
+                                        <td class="text-end">
+                                            <span t-field="doc.opening_balance" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Invoiced:</td>
+                                        <td class="text-end text-danger">
+                                            <span t-field="doc.total_invoiced" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Paid:</td>
+                                        <td class="text-end text-success">
+                                            (<span t-field="doc.total_paid" 
+                                                   t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>)
+                                        </td>
+                                    </tr>
+                                    <tr t-if="doc.total_credits > 0">
+                                        <td>Credits:</td>
+                                        <td class="text-end text-success">
+                                            (<span t-field="doc.total_credits" 
+                                                   t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>)
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold" style="border-top: 2px solid #000;">
+                                        <td>Closing Balance:</td>
+                                        <td class="text-end">
+                                            <span t-field="doc.closing_balance" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Transaction Details -->
+                        <h5 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px; margin-top: 20px;">
+                            TRANSACTION DETAILS
+                        </h5>
+                        <table class="table table-sm table-bordered">
+                            <thead style="background-color: #1f77b4; color: white;">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Reference</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-if="doc.opening_balance != 0">
+                                    <td><span t-field="doc.date_from"/></td>
+                                    <td colspan="3"><strong>Opening Balance</strong></td>
+                                    <td class="text-end"></td>
+                                    <td class="text-end">
+                                        <span t-field="doc.opening_balance" 
+                                              t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                    </td>
+                                </tr>
+                                <t t-foreach="doc.line_ids.sorted('date')" t-as="line">
+                                    <tr>
+                                        <td><span t-field="line.date"/></td>
+                                        <td>
+                                            <span t-if="line.line_type == 'invoice'" class="badge text-bg-danger">
+                                                Invoice
+                                            </span>
+                                            <span t-if="line.line_type == 'payment'" class="badge text-bg-success">
+                                                Payment
+                                            </span>
+                                            <span t-if="line.line_type == 'credit'" class="badge text-bg-info">
+                                                Credit
+                                            </span>
+                                        </td>
+                                        <td><span t-field="line.reference"/></td>
+                                        <td><span t-field="line.description"/></td>
+                                        <td class="text-end">
+                                            <span t-if="line.line_type == 'invoice'">
+                                                <span t-field="line.amount" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </span>
+                                            <span t-if="line.line_type in ['payment', 'credit']" class="text-success">
+                                                (<span t-field="line.amount" 
+                                                       t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>)
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="line.running_balance" 
+                                                  t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- Aging Analysis -->
+                        <div class="row mt-4" t-if="doc.template_id.show_aging">
+                            <div class="col-12">
+                                <h5 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    AGING ANALYSIS
+                                </h5>
+                                <table class="table table-sm table-bordered">
+                                    <thead style="background-color: #1f77b4; color: white;">
+                                        <tr>
+                                            <th>Current</th>
+                                            <th>30 Days</th>
+                                            <th>60 Days</th>
+                                            <th>90 Days</th>
+                                            <th>90+ Days</th>
+                                            <th class="fw-bold">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-end">
+                                                <span t-field="doc.current_amount" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="doc.days_30" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="doc.days_60" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <span t-field="doc.days_90" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                            <td class="text-end text-danger">
+                                                <span t-field="doc.days_90_plus" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                            <td class="text-end fw-bold">
+                                                <span t-field="doc.closing_balance" 
+                                                      t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Payment Prediction -->
+                        <div class="row mt-3" t-if="doc.predicted_payment_date">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <strong>💡 AI Prediction:</strong> 
+                                    Expected payment date: <strong t-field="doc.predicted_payment_date"/>
+                                    (Confidence: <span t-field="doc.payment_confidence"/>%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bank Details -->
+                        <div class="row mt-4" t-if="doc.template_id.show_bank_details">
+                            <div class="col-12">
+                                <h5 style="border-bottom: 2px solid #1f77b4; padding-bottom: 5px;">
+                                    PAYMENT DETAILS
+                                </h5>
+                                <div>
+                                    <strong>Bank:</strong> <span t-field="doc.template_id.bank_name"/><br/>
+                                    <strong>Account Number:</strong> <span t-field="doc.template_id.bank_account_number"/><br/>
+                                    <strong>Branch:</strong> <span t-field="doc.template_id.bank_branch"/><br/>
+                                    <t t-if="doc.template_id.swift_code">
+                                        <strong>SWIFT Code:</strong> <span t-field="doc.template_id.swift_code"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="row mt-4">
+                            <div class="col-12 text-center">
+                                <p t-field="doc.template_id.footer_message" class="text-muted"/>
+                            </div>
+                        </div>
+
+                        <!-- Terms -->
+                        <div class="row mt-2" t-if="doc.template_id.terms_and_conditions">
+                            <div class="col-12">
+                                <small>
+                                    <strong>Terms &amp; Conditions:</strong><br/>
+                                    <span t-field="doc.template_id.terms_and_conditions"/>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
