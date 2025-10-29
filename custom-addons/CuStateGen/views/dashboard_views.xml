@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dashboard Actions -->
+    <record id="action_dashboard_customers" model="ir.actions.act_window">
+        <field name="name">Customer Overview</field>
+        <field name="res_model">customer.account</field>
+        <field name="view_mode">graph,pivot,tree</field>
+        <field name="domain">[('active', '=', True)]</field>
+        <field name="context">{
+            'search_default_has_outstanding': 1
+        }</field>
+    </record>
+
+    <record id="action_dashboard_statements" model="ir.actions.act_window">
+        <field name="name">Recent Statements</field>
+        <field name="res_model">customer.statement</field>
+        <field name="view_mode">graph,pivot,tree</field>
+        <field name="domain">[('date_to', '&gt;=', (context_today() - relativedelta(months=3)).strftime('%Y-%m-%d'))]</field>
+    </record>
+
+    <record id="action_dashboard_materials" model="ir.actions.act_window">
+        <field name="name">Material Insights</field>
+        <field name="res_model">material.analysis</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="context">{'search_default_analyzed': 1}</field>
+    </record>
+
+    <!-- Customer Account Graph Views for Dashboard -->
+    <record id="view_customer_account_graph_outstanding" model="ir.ui.view">
+        <field name="name">customer.account.graph.outstanding</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <graph string="Outstanding by Customer" type="bar">
+                <field name="customer_name"/>
+                <field name="outstanding_balance" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_customer_account_pivot" model="ir.ui.view">
+        <field name="name">customer.account.pivot</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <pivot string="Customer Analysis">
+                <field name="customer_group" type="row"/>
+                <field name="outstanding_balance" type="measure"/>
+                <field name="total_invoiced" type="measure"/>
+                <field name="total_paid" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Statement Graph Views -->
+    <record id="view_customer_statement_graph" model="ir.ui.view">
+        <field name="name">customer.statement.graph</field>
+        <field name="model">customer.statement</field>
+        <field name="arch" type="xml">
+            <graph string="Statements Over Time" type="line">
+                <field name="date_to" interval="month"/>
+                <field name="closing_balance" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_customer_statement_pivot" model="ir.ui.view">
+        <field name="name">customer.statement.pivot</field>
+        <field name="model">customer.statement</field>
+        <field name="arch" type="xml">
+            <pivot string="Statement Analysis">
+                <field name="customer_id" type="row"/>
+                <field name="date_to" interval="month" type="col"/>
+                <field name="closing_balance" type="measure"/>
+                <field name="total_invoiced" type="measure"/>
+                <field name="total_paid" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Material Analysis Graph for Dashboard -->
+    <record id="view_material_analysis_line_graph" model="ir.ui.view">
+        <field name="name">material.analysis.line.graph</field>
+        <field name="model">material.analysis.line</field>
+        <field name="arch" type="xml">
+            <graph string="Top Materials" type="bar">
+                <field name="material_name"/>
+                <field name="total_value" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- KPI Dashboard (using Odoo's standard dashboard) -->
+    <record id="action_custategen_dashboard" model="ir.actions.act_window">
+        <field name="name">CuStateGen Dashboard</field>
+        <field name="res_model">customer.account</field>
+        <field name="view_mode">kanban</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Welcome to CuStateGen!
+            </p>
+            <p>
+                Your business intelligence dashboard for customer statements and material analytics.
+            </p>
+        </field>
+    </record>
+
+    <!-- Quick Actions Menu -->
+    <record id="action_quick_generate_statement" model="ir.actions.server">
+        <field name="name">🚀 Quick Generate Statement</field>
+        <field name="model_id" ref="model_customer_account"/>
+        <field name="binding_model_id" ref="model_customer_account"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+action = {
+    'name': 'Generate Statements',
+    'type': 'ir.actions.act_window',
+    'res_model': 'statement.generator.wizard',
+    'view_mode': 'form',
+    'target': 'new',
+    'context': {
+        'default_customer_ids': [(6, 0, records.ids)]
+    }
+}
+        </field>
+    </record>
+
+    <!-- Dashboard Menu -->
+    <menuitem id="menu_dashboard" 
+              name="📊 Dashboard" 
+              parent="menu_custategen_root" 
+              action="action_custategen_dashboard" 
+              sequence="5"/>
+    
+    <menuitem id="menu_dashboard_customers" 
+              name="Customer Overview" 
+              parent="menu_dashboard" 
+              action="action_dashboard_customers" 
+              sequence="10"/>
+    
+    <menuitem id="menu_dashboard_statements" 
+              name="Statement Trends" 
+              parent="menu_dashboard" 
+              action="action_dashboard_statements" 
+              sequence="20"/>
+    
+    <menuitem id="menu_dashboard_materials" 
+              name="Material Insights" 
+              parent="menu_dashboard" 
+              action="action_dashboard_materials" 
+              sequence="30"/>
+</odoo>

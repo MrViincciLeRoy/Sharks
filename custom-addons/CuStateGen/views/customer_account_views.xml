@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Customer Account Form View -->
+    <record id="view_customer_account_form" model="ir.ui.view">
+        <field name="name">customer.account.form</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <form string="Customer Account">
+                <header>
+                    <button name="action_sync_from_erpnext" 
+                            string="↻ Sync from ERPNext" 
+                            type="object" 
+                            class="oe_highlight"/>
+                    <button name="action_generate_statement" 
+                            string="📄 Generate Statement" 
+                            type="object" 
+                            class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_statements" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-file-text-o">
+                            <field name="statement_count" widget="statinfo" string="Statements"/>
+                        </button>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <h1>
+                            <field name="customer_name"/>
+                        </h1>
+                        <h3>
+                            <field name="name" readonly="1"/>
+                        </h3>
+                    </div>
+                    
+                    <group>
+                        <group string="Contact Information">
+                            <field name="email" widget="email"/>
+                            <field name="phone" widget="phone"/>
+                            <field name="mobile" widget="phone"/>
+                        </group>
+                        <group string="Business Information">
+                            <field name="customer_group"/>
+                            <field name="territory"/>
+                            <field name="payment_terms"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Financial Summary">
+                            <field name="outstanding_balance" widget="monetary" 
+                                   class="text-danger fw-bold"/>
+                            <field name="total_invoiced" widget="monetary"/>
+                            <field name="total_paid" widget="monetary"/>
+                            <field name="credit_limit" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Activity">
+                            <field name="last_invoice_date"/>
+                            <field name="last_payment_date"/>
+                            <field name="days_since_last_payment"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Addresses">
+                            <group>
+                                <field name="billing_address" placeholder="Billing address..."/>
+                                <field name="shipping_address" placeholder="Shipping address..."/>
+                            </group>
+                        </page>
+                        <page string="Sync Information">
+                            <group>
+                                <field name="erpnext_customer_id"/>
+                                <field name="last_sync_date"/>
+                                <field name="active"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Customer Account Tree View -->
+    <record id="view_customer_account_tree" model="ir.ui.view">
+        <field name="name">customer.account.tree</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <tree string="Customer Accounts" 
+                  decoration-danger="outstanding_balance > credit_limit"
+                  decoration-warning="days_since_last_payment > 60">
+                <field name="name"/>
+                <field name="customer_name"/>
+                <field name="customer_group"/>
+                <field name="outstanding_balance" sum="Total Outstanding"/>
+                <field name="credit_limit"/>
+                <field name="days_since_last_payment"/>
+                <field name="statement_count"/>
+                <field name="last_sync_date"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Customer Account Kanban View -->
+    <record id="view_customer_account_kanban" model="ir.ui.view">
+        <field name="name">customer.account.kanban</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="customer_name"/>
+                <field name="outstanding_balance"/>
+                <field name="currency_id"/>
+                <field name="statement_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <strong class="o_kanban_record_title">
+                                    <field name="customer_name"/>
+                                </strong>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <field name="customer_group"/>
+                                <div class="text-muted">
+                                    Outstanding: <field name="outstanding_balance" widget="monetary"/>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <span class="badge rounded-pill text-bg-info">
+                                    <field name="statement_count"/> Statements
+                                </span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Search View with Filters -->
+    <record id="view_customer_account_search" model="ir.ui.view">
+        <field name="name">customer.account.search</field>
+        <field name="model">customer.account</field>
+        <field name="arch" type="xml">
+            <search string="Search Customers">
+                <field name="name"/>
+                <field name="customer_name"/>
+                <field name="customer_group"/>
+                <field name="territory"/>
+                <field name="email"/>
+                
+                <separator/>
+                <filter string="Has Outstanding" 
+                        name="has_outstanding" 
+                        domain="[('outstanding_balance', '>', 0)]"/>
+                <filter string="Over Credit Limit" 
+                        name="over_limit" 
+                        domain="[('outstanding_balance', '>', 'credit_limit')]"/>
+                <filter string="Payment Overdue" 
+                        name="payment_overdue" 
+                        domain="[('days_since_last_payment', '>', 30)]"/>
+                
+                <separator/>
+                <filter string="Active" 
+                        name="active" 
+                        domain="[('active', '=', True)]"/>
+                <filter string="Archived" 
+                        name="inactive" 
+                        domain="[('active', '=', False)]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Customer Group" 
+                            name="group_customer_group" 
+                            context="{'group_by': 'customer_group'}"/>
+                    <filter string="Territory" 
+                            name="group_territory" 
+                            context="{'group_by': 'territory'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_customer_account" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">customer.account</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Add your first customer
+            </p>
+            <p>
+                Sync customers from ERPNext or create them manually.
+            </p>
+        </field>
+    </record>
+
+    <!-- Server Actions -->
+    <record id="action_bulk_sync_customers" model="ir.actions.server">
+        <field name="name">📥 Bulk Sync from ERPNext</field>
+        <field name="model_id" ref="model_customer_account"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {
+    'name': 'Bulk Sync Customers',
+    'type': 'ir.actions.act_window',
+    'res_model': 'bulk.sync.wizard',
+    'view_mode': 'form',
+    'target': 'new',
+    'context': {'default_sync_type': 'customers'}
+}
+        </field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_custategen_root" 
+              name="CuStateGen" 
+              sequence="60"/>
+    
+    <menuitem id="menu_customers" 
+              name="Customers" 
+              parent="menu_custategen_root" 
+              action="action_customer_account" 
+              sequence="10"/>
+    
+    <menuitem id="menu_bulk_operations" 
+              name="Bulk Operations" 
+              parent="menu_custategen_root" 
+              sequence="100"/>
+    
+    <menuitem id="menu_bulk_sync" 
+              name="Bulk Sync" 
+              parent="menu_bulk_operations" 
+              action="action_bulk_sync_customers" 
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Material Analysis Form View -->
+    <record id="view_material_analysis_form" model="ir.ui.view">
+        <field name="name">material.analysis.form</field>
+        <field name="model">material.analysis</field>
+        <field name="arch" type="xml">
+            <form string="Material Analysis">
+                <header>
+                    <button name="action_analyze_materials" 
+                            string="🔍 Analyze Materials" 
+                            type="object" 
+                            class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_view_supplier_analytics" 
+                            string="👥 View Suppliers" 
+                            type="object"
+                            invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,analyzed"/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object" 
+                                name="action_view_materials" icon="fa-cubes">
+                            <field name="line_count" widget="statinfo" string="Materials"/>
+                        </button>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Analysis Name..."/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="Analysis Period">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="analysis_date"/>
+                        </group>
+                        <group string="Summary Statistics" invisible="state == 'draft'">
+                            <field name="total_materials"/>
+                            <field name="total_purchase_value" widget="monetary"/>
+                            <field name="repeated_materials"/>
+                            <field name="unique_suppliers"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    
+                    <!-- Top Items Cards -->
+                    <div class="row mt16 o_settings_container" invisible="state == 'draft'">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <i class="fa fa-star fa-3x text-warning"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <div class="content-group">
+                                    <div class="row">
+                                        <label string="Top Material" class="col-lg-4 o_light_label"/>
+                                        <field name="top_material" class="oe_inline"/>
+                                    </div>
+                                    <div class="row">
+                                        <label string="Value" class="col-lg-4 o_light_label"/>
+                                        <field name="top_material_value" widget="monetary" class="oe_inline"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <i class="fa fa-building fa-3x text-primary"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <div class="content-group">
+                                    <div class="row">
+                                        <label string="Top Supplier" class="col-lg-4 o_light_label"/>
+                                        <field name="top_supplier" class="oe_inline"/>
+                                    </div>
+                                    <div class="row">
+                                        <label string="Value" class="col-lg-4 o_light_label"/>
+                                        <field name="top_supplier_value" widget="monetary" class="oe_inline"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <notebook>
+                        <page string="Material Details">
+                            <field name="material_line_ids" nolabel="1">
+                                <tree decoration-info="is_repeated"
+                                      decoration-danger="price_trend=='increasing'"
+                                      decoration-success="price_trend=='decreasing'">
+                                    <field name="material_code"/>
+                                    <field name="material_name"/>
+                                    <field name="purchase_count"/>
+                                    <field name="total_value" sum="Total"/>
+                                    <field name="avg_unit_price"/>
+                                    <field name="primary_supplier"/>
+                                    <field name="supplier_count"/>
+                                    <field name="purchase_frequency" widget="badge"/>
+                                    <field name="price_trend" widget="badge" 
+                                           decoration-danger="price_trend=='increasing'"
+                                           decoration-success="price_trend=='decreasing'"/>
+                                    <field name="is_repeated" invisible="1"/>
+                                    <field name="last_purchase_date"/>
+                                    <button name="action_view_purchase_history" 
+                                            type="object" 
+                                            icon="fa-history" 
+                                            string="History"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="Repeated Purchases" invisible="repeated_materials == 0">
+                            <field name="material_line_ids" nolabel="1" 
+                                   domain="[('is_repeated', '=', True)]">
+                                <tree>
+                                    <field name="material_code"/>
+                                    <field name="material_name"/>
+                                    <field name="purchase_count"/>
+                                    <field name="total_value" sum="Total"/>
+                                    <field name="primary_supplier"/>
+                                    <field name="price_trend" widget="badge"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="Price Trends">
+                            <field name="material_line_ids" nolabel="1"
+                                   domain="[('price_trend', '!=', 'stable')]">
+                                <tree decoration-danger="price_trend=='increasing'"
+                                      decoration-success="price_trend=='decreasing'">
+                                    <field name="material_code"/>
+                                    <field name="material_name"/>
+                                    <field name="avg_unit_price"/>
+                                    <field name="price_trend" widget="badge"/>
+                                    <field name="purchase_count"/>
+                                    <field name="total_value"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="Notes">
+                            <field name="notes" placeholder="Analysis notes and observations..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Material Analysis Tree View -->
+    <record id="view_material_analysis_tree" model="ir.ui.view">
+        <field name="name">material.analysis.tree</field>
+        <field name="model">material.analysis</field>
+        <field name="arch" type="xml">
+            <tree string="Material Analyses">
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="total_materials"/>
+                <field name="total_purchase_value" sum="Total"/>
+                <field name="repeated_materials"/>
+                <field name="unique_suppliers"/>
+                <field name="state" widget="badge"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Material Analysis Graph View -->
+    <record id="view_material_analysis_graph" model="ir.ui.view">
+        <field name="name">material.analysis.graph</field>
+        <field name="model">material.analysis</field>
+        <field name="arch" type="xml">
+            <graph string="Material Analysis" type="bar">
+                <field name="name"/>
+                <field name="total_purchase_value" type="measure"/>
+                <field name="total_materials" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Material Analysis Line Tree View (for quick access) -->
+    <record id="view_material_analysis_line_tree" model="ir.ui.view">
+        <field name="name">material.analysis.line.tree</field>
+        <field name="model">material.analysis.line</field>
+        <field name="arch" type="xml">
+            <tree string="Materials" 
+                  decoration-info="is_repeated"
+                  decoration-danger="price_trend=='increasing'">
+                <field name="material_code"/>
+                <field name="material_name"/>
+                <field name="purchase_count"/>
+                <field name="total_quantity"/>
+                <field name="total_value" sum="Total"/>
+                <field name="avg_unit_price"/>
+                <field name="primary_supplier"/>
+                <field name="supplier_count"/>
+                <field name="purchase_frequency" widget="badge"/>
+                <field name="price_trend" widget="badge"/>
+                <field name="is_repeated" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Material Analysis Line Form View -->
+    <record id="view_material_analysis_line_form" model="ir.ui.view">
+        <field name="name">material.analysis.line.form</field>
+        <field name="model">material.analysis.line</field>
+        <field name="arch" type="xml">
+            <form string="Material Details">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="material_code"/>
+                        </h1>
+                        <h2>
+                            <field name="material_name"/>
+                        </h2>
+                    </div>
+                    
+                    <group>
+                        <group string="Purchase Statistics">
+                            <field name="purchase_count"/>
+                            <field name="total_quantity"/>
+                            <field name="total_value" widget="monetary"/>
+                            <field name="avg_unit_price" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Supplier Information">
+                            <field name="primary_supplier"/>
+                            <field name="supplier_count"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Purchase Pattern">
+                            <field name="is_repeated" widget="boolean_toggle"/>
+                            <field name="purchase_frequency" widget="badge"/>
+                            <field name="price_trend" widget="badge"/>
+                        </group>
+                        <group string="Dates">
+                            <field name="first_purchase_date"/>
+                            <field name="last_purchase_date"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Inventory" invisible="not has_inventory_link">
+                        <field name="has_inventory_link" widget="boolean_toggle"/>
+                        <field name="current_stock"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_material_analysis" model="ir.actions.act_window">
+        <field name="name">Material Analysis</field>
+        <field name="res_model">material.analysis</field>
+        <field name="view_mode">tree,form,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first material analysis
+            </p>
+            <p>
+                Analyze purchasing patterns, identify repeated materials, and track supplier performance.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_material_analysis_line" model="ir.actions.act_window">
+        <field name="name">Materials</field>
+        <field name="res_model">material.analysis.line</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_analytics" 
+              name="Analytics" 
+              parent="menu_custategen_root" 
+              sequence="30"/>
+    
+    <menuitem id="menu_material_analysis" 
+              name="Material Analysis" 
+              parent="menu_analytics" 
+              action="action_material_analysis" 
+              sequence="10"/>
+</odoo>

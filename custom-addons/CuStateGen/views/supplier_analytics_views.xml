@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Supplier Analytics Form View -->
+    <record id="view_supplier_analytics_form" model="ir.ui.view">
+        <field name="name">supplier.analytics.form</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <form string="Supplier Analytics">
+                <header>
+                    <button name="action_compare_suppliers" 
+                            string="📊 Compare" 
+                            type="object" 
+                            class="btn-primary"/>
+                    <field name="is_active" widget="boolean_button" 
+                           options="{'terminology': 'active'}"/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                        <h3>
+                            <field name="supplier_code"/>
+                        </h3>
+                    </div>
+                    
+                    <group>
+                        <group string="Period">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="erpnext_supplier_id"/>
+                        </group>
+                        <group string="Status">
+                            <field name="preferred_supplier" widget="boolean_toggle"/>
+                            <field name="days_since_last_purchase"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Purchase Summary">
+                        <group>
+                            <field name="total_purchase_value" widget="monetary" class="fw-bold"/>
+                            <field name="total_invoices"/>
+                            <field name="avg_invoice_value" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="total_materials"/>
+                            <field name="first_purchase_date"/>
+                            <field name="last_purchase_date"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Performance Metrics">
+                        <group>
+                            <field name="on_time_delivery_rate" widget="percentage"/>
+                            <field name="quality_rating" widget="percentage"/>
+                        </group>
+                        <group>
+                            <field name="price_competitiveness" widget="badge"
+                                   decoration-success="price_competitiveness=='low'"
+                                   decoration-warning="price_competitiveness=='average'"
+                                   decoration-danger="price_competitiveness=='high'"/>
+                        </group>
+                    </group>
+                    
+                    <notebook>
+                        <page string="Materials Supplied">
+                            <field name="material_line_ids" nolabel="1">
+                                <tree>
+                                    <field name="material_code"/>
+                                    <field name="material_name"/>
+                                    <field name="purchase_count"/>
+                                    <field name="total_quantity"/>
+                                    <field name="total_value" sum="Total"/>
+                                    <field name="avg_unit_price"/>
+                                    <field name="last_purchase_date"/>
+                                </tree>
+                            </field>
+                        </page>
+                        
+                        <page string="Notes">
+                            <field name="notes" placeholder="Supplier notes and observations..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Supplier Analytics Tree View -->
+    <record id="view_supplier_analytics_tree" model="ir.ui.view">
+        <field name="name">supplier.analytics.tree</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <tree string="Supplier Analytics" 
+                  decoration-success="preferred_supplier"
+                  decoration-muted="not is_active">
+                <field name="name"/>
+                <field name="total_purchase_value" sum="Total"/>
+                <field name="total_invoices" sum="Invoices"/>
+                <field name="total_materials"/>
+                <field name="avg_invoice_value"/>
+                <field name="on_time_delivery_rate" widget="percentage" optional="hide"/>
+                <field name="price_competitiveness" widget="badge" optional="show"/>
+                <field name="preferred_supplier" widget="boolean_toggle"/>
+                <field name="is_active" invisible="1"/>
+                <field name="days_since_last_purchase"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Supplier Analytics Kanban View -->
+    <record id="view_supplier_analytics_kanban" model="ir.ui.view">
+        <field name="name">supplier.analytics.kanban</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="name"/>
+                <field name="total_purchase_value"/>
+                <field name="total_materials"/>
+                <field name="preferred_supplier"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <strong class="o_kanban_record_title">
+                                    <field name="name"/>
+                                    <span t-if="record.preferred_supplier.raw_value" 
+                                          class="badge rounded-pill text-bg-success ms-2">⭐ Preferred</span>
+                                </strong>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div class="text-muted">
+                                    Total: <field name="total_purchase_value" widget="monetary"/>
+                                </div>
+                                <div class="text-muted">
+                                    Materials: <field name="total_materials"/>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <field name="price_competitiveness" widget="label_selection" 
+                                       options="{'classes': {'low': 'success', 'high': 'danger'}}"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Supplier Analytics Graph View -->
+    <record id="view_supplier_analytics_graph" model="ir.ui.view">
+        <field name="name">supplier.analytics.graph</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <graph string="Supplier Performance" type="bar">
+                <field name="name"/>
+                <field name="total_purchase_value" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Supplier Analytics Pivot View -->
+    <record id="view_supplier_analytics_pivot" model="ir.ui.view">
+        <field name="name">supplier.analytics.pivot</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <pivot string="Supplier Analysis">
+                <field name="name" type="row"/>
+                <field name="total_purchase_value" type="measure"/>
+                <field name="total_materials" type="measure"/>
+                <field name="on_time_delivery_rate" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Supplier Analytics Search View -->
+    <record id="view_supplier_analytics_search" model="ir.ui.view">
+        <field name="name">supplier.analytics.search</field>
+        <field name="model">supplier.analytics</field>
+        <field name="arch" type="xml">
+            <search string="Search Suppliers">
+                <field name="name"/>
+                <field name="supplier_code"/>
+                
+                <separator/>
+                <filter string="Preferred" name="preferred" 
+                        domain="[('preferred_supplier', '=', True)]"/>
+                <filter string="Active" name="active" 
+                        domain="[('is_active', '=', True)]"/>
+                <filter string="Inactive (30+ days)" name="inactive" 
+                        domain="[('days_since_last_purchase', '>', 30)]"/>
+                
+                <separator/>
+                <filter string="Low Cost" name="low_cost" 
+                        domain="[('price_competitiveness', '=', 'low')]"/>
+                <filter string="Premium" name="premium" 
+                        domain="[('price_competitiveness', '=', 'high')]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="Price Level" name="group_price" 
+                            context="{'group_by': 'price_competitiveness'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_supplier_analytics" model="ir.actions.act_window">
+        <field name="name">Supplier Analytics</field>
+        <field name="res_model">supplier.analytics</field>
+        <field name="view_mode">kanban,tree,form,graph,pivot</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate supplier analytics
+            </p>
+            <p>
+                Track supplier performance, purchase volumes, and pricing trends.
+            </p>
+        </field>
+    </record>
+
+    <!-- Server Action for Bulk Generation -->
+    <record id="action_generate_supplier_analytics" model="ir.actions.server">
+        <field name="name">📊 Generate Supplier Analytics</field>
+        <field name="model_id" ref="model_supplier_analytics"/>
+        <field name="state">code</field>
+        <field name="code">
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+date_to = datetime.now().date()
+date_from = date_to - relativedelta(months=6)
+
+result = model.generate_supplier_analytics(date_from, date_to)
+
+action = {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Analytics Generated',
+        'message': f'Generated analytics for {result} suppliers',
+        'type': 'success',
+    }
+}
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_supplier_analytics" 
+              name="Supplier Analytics" 
+              parent="menu_analytics" 
+              action="action_supplier_analytics" 
+              sequence="20"/>
+    
+    <menuitem id="menu_generate_supplier_analytics" 
+              name="Generate Analytics" 
+              parent="menu_bulk_operations" 
+              action="action_generate_supplier_analytics" 
+              sequence="20"/>
+</odoo>
